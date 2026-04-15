@@ -1,0 +1,72 @@
+## 1) `LVDT_Plot_V2.py` — Verificação rápida do sinal e pico
+
+**O que faz**  
+- Lê `tempo × deslocamento`, converte vírgula→ponto, plota a série e marca o pico absoluto (|d|max).
+
+**Para que serve no projeto**  
+- “Sanity check” do LVDT: saturação, ruído, valores atípicos, amplitude típica antes das análises.
+
+Riscos/limites (CHAT)
+- O maior pico pode ser um valor atípico (ruído/transiente).
+- Sem remoção de offset/deriva e sem filtragem.
+
+---
+
+## 2) `fn_calculation.py` — Frequência natural via FFT
+
+**O que faz**  
+- Remove média, calcula `fs`, aplica `rfft`, encontra o pico espectral; filtragem opcional.
+
+**Para que serve no projeto**  
+- Mede **frequência natural** do conjunto (dinâmica do sistema).  
+- Ajuda a definir faixas de **filtro** e a conferir **rigidez** por via dinâmica:
+  - Verificação cruzada entre a frequência natural medida e a rigidez torcional: `k ≈ (2π·fn)^2 · I` (se `I` do sistema for conhecido).
+
+Riscos/limites (CHAT) 
+- Sem janela (Hann) → **vazamento espectral**.  
+- `fs` por `N/Δt` é ok, mas a média de `diff(t)` é **mais robusta**.
+
+---
+
+## 3) “Osciloscópio” em tempo real — Monitoramento on-line
+
+**O que faz**  
+- Lê `data.txt` continuamente e plota a última janela de tempo; centraliza com **baseline**.
+
+**Para que serve no projeto**  
+- Operação de bancada: ver drift, transientes, evitar saturação, ajustar setup.
+
+Riscos/limites (CHAT) 
+- Lê o arquivo inteiro a cada frame; histórico pode **crescer sem limite**.  
+- Baseline móvel pode “comer” componente lenta do sinal se mal calibrada.
+
+---
+
+## 4) Calibração estática (CSV) — `k` (N·m/rad) via torque × ângulo
+
+**O que faz**  
+- Lê `M` [kg], `d` [m], `e` [m]; calcula `τ = M·g·l` e `θ = d/L`; ajusta `τ ≈ k·θ + a`.
+
+**Para que serve no projeto**  
+- **Pilar estático**: sem `k`, não há conversão confiável de deslocamento → força.
+
+Riscos/limites (CHAT)  
+- Em `errorbar`, `xerr` precisa ser **σθ = σd/L** (não σd).  
+- Intercepto `a` é **torque** (unidade correta: **N·m**, não N·m/rad).  
+- Ideal usar **ponderação** (1/σ²) e reportar **R²**.
+
+---
+
+## 5) Diferença entre janelas (TXT) — `Δd` e incerteza
+
+**O que faz**  
+- Filtra (Butterworth zero-fase), pega **médias** em duas janelas temporais e reporta `Δd = |mean1 − mean2|`.
+
+**Para que serve no projeto**  
+- Medir o **passo de deslocamento** entre “antes” e “durante” (ou “durante” e “depois”) do empuxo — base do resultado final.
+
+Riscos/limites (CHAT)  
+- Combinar **std** diretamente superestima a incerteza da **diferença entre médias**.  
+- Correto é **SEM combinado**: `σΔ = sqrt( (σ1²/n1) + (σ2²/n2) )`.  
+- Seleção por “índice mais próximo” pode ser trocada por **máscara de tempo** (mais limpa e previsível).
+
