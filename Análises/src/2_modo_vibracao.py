@@ -10,7 +10,7 @@ import datetime
 # ==========================================
 # 1. CARREGAMENTO DOS DADOS
 # ==========================================
-caminho_arquivo = r"C:\Users\thami\OneDrive - unb.br\FGA\Balança de Microempuxo - LaSE\6.Modelagem do sistema\2_modo_vibracao\data\14-04-2026\2_sopro_diagonal.txt" 
+caminho_arquivo = r"C:\Users\thami\OneDrive - unb.br\FGA\Balança de Microempuxo - LaSE\Integrated-Software-Architecture-for-Micro-Thrust-Balance\Análises\data\carga_constante\17-04-26\P2_d3.txt" 
 df = pd.read_csv(caminho_arquivo, sep='\s+', decimal=',', header=None, names=['tempo', 'deslocamento'])
 
 tempo = df['tempo'].values
@@ -43,7 +43,7 @@ print(f"Número N de amostras: {N}")
 print(f"Freqüência de amostragem estimada: {fs:.2f} Hz")
 
 # Pegamos apenas a metade positiva do espectro
-frequencias_hz = xf[:N//2]
+frequencias_hz = xf[:N//2] 
 # Amplitude normalizada: (2/N) para converter para a unidade real do deslocamento
 amplitude = (2.0 / N) * np.abs(yf[:N//2])
 
@@ -99,7 +99,7 @@ for freq in frequencias_modos:
 plt.tight_layout()
 
 # --- SALVANDO A IMAGEM ANTES DE MOSTRAR ---
-pasta_resultados = r'C:\Users\thami\OneDrive - unb.br\FGA\Balança de Microempuxo - LaSE\6.Modelagem do sistema\2_modo_vibracao\resultados'
+pasta_resultados = r'C:\Users\thami\OneDrive - unb.br\FGA\Balança de Microempuxo - LaSE\Integrated-Software-Architecture-for-Micro-Thrust-Balance\Análises\resultados\2_modo_vibracao'
 if not os.path.exists(pasta_resultados):
     os.makedirs(pasta_resultados)
 
