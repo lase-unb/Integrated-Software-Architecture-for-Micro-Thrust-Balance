@@ -1,11 +1,21 @@
 clear all; close all; clc;
+
 % =========================================================================
 % SCRIPT PRINCIPAL
 % =========================================================================
 
-% Importa os dados brutos
-% Colunas são separadas por TAB ('\t')
-dados_raw = readmatrix('P1_d1_09-04-2026.txt', 'OutputType', 'string', 'Delimiter', '\t');
+% 1. Importa os dados brutos
+% Define o caminho da pasta onde estão os dados
+pasta_dados = 'C:\Users\thami\OneDrive - unb.br\FGA\Balança de Microempuxo - LaSE\Integrated-Software-Architecture-for-Micro-Thrust-Balance\Análises\data\carga_constante';
+
+% Define o nome do arquivo
+nome_arquivo = 'P1_d1_2.txt';
+
+%  Cria o caminho completo
+caminho_completo = fullfile(pasta_dados, nome_arquivo);
+
+% Importa os dados brutos usando o caminho completo
+dados_raw = readmatrix(caminho_completo, 'OutputType', 'string', 'Delimiter', '\t');
 
 % Substitui ',' por '.' e converte tudo para números (double)
 dados_num = double(strrep(dados_raw, ',', '.'));
@@ -13,7 +23,7 @@ dados_num = double(strrep(dados_raw, ',', '.'));
 % Limpa qualquer linha vazia
 dados = rmmissing(dados_num); 
 
-% ---> TRAVA DE SEGURANÇA <---
+% Interrompe o script caso haja problema com a matriz de input
 if isempty(dados)
     error('ERRO: A matriz ficou vazia. O arquivo P1_d1_09-04-2026.txt pode não estar separado por TAB. Tente mudar o "Delimiter" acima para espaço (" ") ou ponto-e-vírgula (";").');
 end
@@ -21,26 +31,59 @@ end
 t = dados(:, 1); % Vetor de tempo
 x = dados(:, 2); % Vetor de deslocamento
 
-% Dados de medição 
-m_conhecida = 0.00002; % kg
-g_local = 9.784; % m/s^2
-l = 0.00552; % m
-L = 0.3675; % m
+% 2. Dados de medição 
+m_conhecida = 0.00002; % Massa conhecida [kg]
+g_local = 9.784;       % Aceleração da gravidade local [m/s^2]
+l = 0.00552;           % Distãncia do pivô até o ponto de aplicação da massa conhecida [m]
+L = 0.3675;            % Comprimento do braço do pêndulo [m]
 
-% Bloco de funções
-delta_d = deslocamento(t, x);
-
+% 3. Cálculos principais
+% Passamos a variável 'nome_arquivo' para a função de deslocamento (título do gráfico)
+delta_d = deslocamento(t, x, nome_arquivo);
 Feq_Newtons = forca_equivalente(m_conhecida, g_local, l, L);
-Feq = Feq_Newtons * 1e6; % Converte a força para micro-Newtons (µN) para bater com a unidade da rigidez
 
+% Converte a força para micro-Newtons (µN) para bater com a unidade da rigidez
+Feq = Feq_Newtons * 1e6; 
+
+% Função de rigidez
 k = rigidez_linear(Feq, delta_d);
 
-% Exibe os resultados finais na tela do MATLAB
+% 4. Exibe os resultados finais no Command Window
 fprintf('\n--- RESULTADOS ---\n');
-fprintf('Força equivalente calculada: %.5f µN\n', Feq); % Adicionado \n no final
+fprintf('Força equivalente calculada: %.5f µN\n', Feq); 
 fprintf('Deslocamento Medido (Delta d): %.5f µm\n', delta_d);
 fprintf('Rigidez Calculada (k):         %.5f µN/µm\n\n', k);
 
+% =========================================================================
+% BLOCO RESULTADOS NO GRÁFICO
+% =========================================================================
+str_resultados = sprintf('--- RESULTADOS ---\nForça Eq.: %.5f \\muN\n\\Delta d: %.5f \\mum\nRigidez (k): %.5f \\muN/\\mum', Feq, delta_d, k);
+caixa = annotation('textbox', [0.65, 0.15, 0.25, 0.15], ...
+    'String', str_resultados, ...
+    'FitBoxToText', 'on', ...           
+    'BackgroundColor', [1 1 1 0.9], ... 
+    'EdgeColor', 'k', ...               
+    'FontSize', 10, ...
+    'FontWeight', 'bold');
+caixa.ButtonDownFcn = 'selectobject';
+
+% =========================================================================
+% SALVAMENTO DA FIGURA
+% =========================================================================
+% Define the folder
+folder = 'C:\Users\thami\OneDrive - unb.br\FGA\Balança de Microempuxo - LaSE\Integrated-Software-Architecture-for-Micro-Thrust-Balance\Análises\resultados\carga_constante'; 
+
+[~, nome_base, ~] = fileparts(nome_arquivo);
+filename = [nome_base, '.png'];
+
+% Create the full path
+fullPath = fullfile(folder, filename);
+
+% Save the current figure (gcf) to that path
+exportgraphics(gcf, fullPath, 'Resolution', 300); 
+
+% Imprime mensagem de confirmação de salvamento
+fprintf('Gráfico salvo com sucesso em:\n%s\n', fullPath);
 
 % =========================================================================
 % DEFINIÇÃO DAS FUNÇÕES
@@ -50,11 +93,11 @@ function [Feq] = forca_equivalente(m_conhecida, g_local, l, L)
     Feq = m_conhecida * g_local * l * (1/L);
 end
 
-function [diff_val] = deslocamento(time, d)
+function [diff_val] = deslocamento(time, d, titulo_grafico)
     % Parâmetros do filtro e das janelas de tempo
     find_diff = true;
-    time1 = [150, 280];
-    time2 = [400, 600];
+    time1 = [30, 100];
+    time2 = [150, 230];
     cutoff_freq = 0.05;
     order = 5;
 
@@ -72,7 +115,7 @@ function [diff_val] = deslocamento(time, d)
     % =========================================================================
     % Cálculos de Deslocamento e Incerteza
     % =========================================================================
-    diff_val = 0; % Variável de segurança
+    diff_val = 0; 
     
     if find_diff
         % --- Janela 1 ---
@@ -103,7 +146,7 @@ function [diff_val] = deslocamento(time, d)
     % =========================================================================
     % Plotagem do Gráfico Avançado
     % =========================================================================
-    figure('Name', 'Analise de Deslocamento', 'Color', 'w');
+    figure('Name', 'Analise de Deslocamento', 'Color', 'w', 'Position', [100, 100, 900, 500]);
     hold on;
     
     % Sinal bruto e Sinal filtrado
@@ -133,13 +176,16 @@ function [diff_val] = deslocamento(time, d)
     
     xlabel('Tempo (s)');
     ylabel('Deslocamento (\mu m)');
-    title('Calibração: 1 Toque Canto Esquerdo');
+    
+    title(titulo_grafico, 'Interpreter', 'none'); 
+    
     grid on;
     legend('Location', 'best');
     hold off;
 end
 
 function [k] = rigidez_linear(Feq, delta_d)
+    % Calcula a rigidez dividindo a força equivalente pelo deslocamento medido.
+    % O resultado é a rigidez linear equivalente no ponto do sensor.
     k = Feq / delta_d;
 end
-
