@@ -1,0 +1,3 @@
+Posição do Centro de Gravidade (Y): -0.0672 m (pivô como referencial)
+Sensibilidade: 0.0939 m/N
+O CG está abaixo do pivô (Equilíbrio Estável).

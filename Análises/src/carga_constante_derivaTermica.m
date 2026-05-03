@@ -6,10 +6,10 @@ clear all; close all; clc;
 
 % 1. Importa os dados brutos
 % Define o caminho da pasta onde estão os dados
-pasta_dados = 'C:\Users\thami\OneDrive - unb.br\FGA\Balança de Microempuxo - LaSE\Integrated-Software-Architecture-for-Micro-Thrust-Balance\Análises\data\carga_constante';
+pasta_dados = 'C:\Users\thami\OneDrive - unb.br\FGA\Balança de Microempuxo - LaSE\Integrated-Software-Architecture-for-Micro-Thrust-Balance\Análises\data\deriva_termica';
 
 % Define o nome do arquivo
-nome_arquivo = 'P6_d1.txt';
+nome_arquivo = 'deriva_peso4_28-04';
 
 % Une a pasta e o arquivo de forma segura (cria o caminho completo)
 caminho_completo = fullfile(pasta_dados, nome_arquivo);
@@ -90,7 +90,7 @@ fullPath = fullfile(folder, filename);
 %exportgraphics(gcf, fullPath, 'Resolution', 300); 
 
 % Imprime mensagem de confirmação de salvamento
-fprintf('Gráfico salvo com sucesso em:\n%s\n', fullPath);
+%fprintf('Gráfico salvo com sucesso em:\n%s\n', fullPath);
 
 
 % =========================================================================

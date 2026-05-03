@@ -9,7 +9,7 @@ clear all; close all; clc;
 pasta_dados = 'C:\Users\thami\OneDrive - unb.br\FGA\Balança de Microempuxo - LaSE\Integrated-Software-Architecture-for-Micro-Thrust-Balance\Análises\data\carga_constante';
 
 % Define o nome do arquivo
-nome_arquivo = 'P1_d1_2.txt';
+nome_arquivo = 'P1_d3_2.txt';
 
 %  Cria o caminho completo
 caminho_completo = fullfile(pasta_dados, nome_arquivo);
@@ -34,7 +34,7 @@ x = dados(:, 2); % Vetor de deslocamento
 % 2. Dados de medição 
 m_conhecida = 0.00002; % Massa conhecida [kg]
 g_local = 9.784;       % Aceleração da gravidade local [m/s^2]
-l = 0.00552;           % Distãncia do pivô até o ponto de aplicação da massa conhecida [m]
+l = 0.01552;           % Distãncia do pivô até o ponto de aplicação da massa conhecida [m]
 L = 0.3675;            % Comprimento do braço do pêndulo [m]
 
 % 3. Cálculos principais
@@ -185,7 +185,6 @@ function [diff_val] = deslocamento(time, d, titulo_grafico)
 end
 
 function [k] = rigidez_linear(Feq, delta_d)
-    % Calcula a rigidez dividindo a força equivalente pelo deslocamento medido.
     % O resultado é a rigidez linear equivalente no ponto do sensor.
     k = Feq / delta_d;
 end
