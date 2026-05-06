@@ -48,8 +48,8 @@ def plotar_curva_calibracao(Feq, deslocamento, desvio_padrao, save_path):
     plt.tight_layout()
 
     # Salva a figura na pasta de resultados ANTES de exibir na tela
-    plt.savefig(save_path, dpi=300, bbox_inches='tight')
-    print(f"Gráfico salvo em: {save_path}")
+    #plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    #print(f"Gráfico salvo em: {save_path}")
 
     # Exibe o gráfico na tela
     plt.show()
