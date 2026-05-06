@@ -1,17 +1,17 @@
 clear all; clc;
 
-% 1. DADOS DE ENTRADA CONHECIDOS
-% Posições do CG [m]
+% 1. KNOWN INPUT DATA
+% CG Positions [m]
 CG_inter = -0.3131; 
 CG_menor = -0.3369; 
 CG_maior = -0.0672; 
 
-% Sensibilidades correspondentes [m/N]
+% Corresponding Sensitivities [m/N]
 S = 0.0582; 
 S_menor = 0.0179; 
 S_maior = 0.0939; 
 
-% Vetores de Deslocamento e Força para cada caso
+% Displacement and Force vectors for each case
 d_inter = [1.8039, 3.9369, 5.8372, 9.7834];
 f_inter = [167.1960, 324.3694, 486.3337, 808.3664];
 
@@ -21,111 +21,136 @@ f_menor = [167.1960, 618.1822];
 d_maior = [3.3523, 6.7382, 9.5474, 14.2316];
 f_maior = [167.1960, 418.8246, 618.1822, 918.3950];
 
-% 2. EXTRAÇÃO DOS COEFICIENTES DAS CURVAS REAIS (F = a*d + b)
+% 2. EXTRACTION OF REAL CURVE COEFFICIENTS (F = a*d + b)
 p_inter = polyfit(d_inter, f_inter, 1);
 p_menor = polyfit(d_menor, f_menor, 1);
 p_maior = polyfit(d_maior, f_maior, 1);
 
-% Agrupando os dados na mesma ordem (Menor CG, Intermediário, Maior CG)
+% --- R^2 CALCULATION BLOCK ---
+% Intermediate Sensitivity
+y_fit_inter = polyval(p_inter, d_inter);
+SQ_res_inter = sum((f_inter - y_fit_inter).^2);
+SQ_tot_inter = (length(f_inter)-1) * var(f_inter);
+R2_inter = 1 - (SQ_res_inter / SQ_tot_inter);
+
+% Lower Sensitivity
+y_fit_menor = polyval(p_menor, d_menor);
+SQ_res_menor = sum((f_menor - y_fit_menor).^2);
+SQ_tot_menor = (length(f_menor)-1) * var(f_menor);
+R2_menor = 1 - (SQ_res_menor / SQ_tot_menor);
+
+% Higher Sensitivity
+y_fit_maior = polyval(p_maior, d_maior);
+SQ_res_maior = sum((f_maior - y_fit_maior).^2);
+SQ_tot_maior = (length(f_maior)-1) * var(f_maior);
+R2_maior = 1 - (SQ_res_maior / SQ_tot_maior);
+
+% Print R^2 results to the Command Window
+fprintf('--- R^2 Coefficients ---\n');
+fprintf('S = %.4f m/N (Lower CG) -> R^2 = %.4f\n', S_menor, R2_menor);
+fprintf('S = %.4f m/N (Inter CG) -> R^2 = %.4f\n', S, R2_inter);
+fprintf('S = %.4f m/N (Higher CG) -> R^2 = %.4f\n\n', S_maior, R2_maior);
+% -----------------------------
+
+% Grouping data in the same order (Lower CG, Intermediate, Higher CG)
 CG_conhecidos = [CG_menor, CG_inter, CG_maior];
-S_conhecidos = [S_menor, S, S_maior]; % Vetor auxiliar para os rótulos de texto
+S_conhecidos = [S_menor, S, S_maior]; % Auxiliary vector for text labels
 a_conhecidos = [p_menor(1), p_inter(1), p_maior(1)];
 b_conhecidos = [p_menor(2), p_inter(2), p_maior(2)];
 
-% 3. MODELAGEM MATEMÁTICA (SUPERFÍCIE DE CALIBRAÇÃO)
+% 3. MATHEMATICAL MODELING (CALIBRATION SURFACE)
 poly_a = polyfit(CG_conhecidos, a_conhecidos, 2);
 poly_b = polyfit(CG_conhecidos, b_conhecidos, 2);
 
-% 4. TESTE DE PREVISÃO PARA UM NOVO CG (Simulação)
-CG_alvo = -0.2000; % [m] -> Exemplo de um CG que você nunca mediu
+% 4. PREDICTION TEST FOR A NEW CG (Simulation)
+CG_alvo = -0.2000; % [m] -> Example of an unmeasured CG
 
-% Estimando a nova reta
+% Estimating the new line
 a_estimado = polyval(poly_a, CG_alvo);
 b_estimado = polyval(poly_b, CG_alvo);
 
-fprintf('--- Modelo Preditivo para CG = %.4f m ---\n', CG_alvo);
-fprintf('Coeficiente Angular (a) estimado: %.4f\n', a_estimado);
-fprintf('Coeficiente Linear (b) estimado: %.4f\n', b_estimado);
-fprintf('Equação da nova reta: Feq = %.4f * d %+.4f\n\n', a_estimado, b_estimado);
+fprintf('--- Predictive Model for CG = %.4f m ---\n', CG_alvo);
+fprintf('Estimated Angular Coefficient (a): %.4f\n', a_estimado);
+fprintf('Estimated Linear Coefficient (b): %.4f\n', b_estimado);
+fprintf('New line equation: Feq = %.4f * d %+.4f\n\n', a_estimado, b_estimado);
 
-% 5. PLOTAGEM DOS RESULTADOS 
+% 5. PLOTTING RESULTS 
+% Figure 1: Coefficient Behavior vs CG Position
+figure('Name', 'Calibration Parameters vs CG Position', 'Color', 'w', 'Position', [100, 100, 800, 400]);
 
-% Figura 1: Comportamento dos Coeficientes em relação ao CG
-figure('Name', 'Parâmetros de Calibração vs Posição do CG', 'Color', 'w', 'Position', [100, 100, 800, 400]);
-
-% Plot do Coeficiente Angular 'a' (Rigidez)
+% Plot of Angular Coefficient 'a' (Stiffness)
 subplot(1, 2, 1);
 CG_plot = linspace(min(CG_conhecidos), max(CG_conhecidos), 100);
 a_plot = polyval(poly_a, CG_plot);
 plot(CG_plot, a_plot, '-k', 'LineWidth', 1); hold on;
-scatter(CG_conhecidos, a_conhecidos, 40, 'k', 'filled'); % Pontos medidos
+scatter(CG_conhecidos, a_conhecidos, 40, 'k', 'filled'); % Measured points
 
-% Adicionando os rótulos de sensibilidade nos pontos medidos (Rigidez)
+% Adding sensitivity labels to measured points (Stiffness)
 for i = 1:length(CG_conhecidos)
-    text(CG_conhecidos(i), a_conhecidos(i), sprintf('  S = %.4f', S_conhecidos(i)), ...
-        'VerticalAlignment', 'middle', 'HorizontalAlignment', 'left', 'FontSize', 9);
+    text(CG_conhecidos(i), a_conhecidos(i), sprintf('  S = %.4f m/N', S_conhecidos(i)), ...
+        'VerticalAlignment', 'middle', 'HorizontalAlignment', 'left', 'FontSize', 13);
 end
 
-%scatter(CG_alvo, a_estimado, 40, 'b*', 'LineWidth', 1.5); % Ponto estimado
-title('Comportamento da Rigidez (a)');
-xlabel('Posição do CG (m)');
-ylabel('Coef. Angular (a)');
-%legend('Modelo Preditivo', 'Dados Reais', 'Estimativa Nova', 'Location', 'best');
-legend('Modelo Preditivo', 'Dados Reais', 'Location', 'best');
+%scatter(CG_alvo, a_estimado, 40, 'b*', 'LineWidth', 1.5); % Estimated point
+title('Stiffness Behavior (a)', 'Fontsize', 13);
+xlabel('CG Position (m)');
+ylabel('Angular Coef. (a)');
+%legend('Predictive Model', 'Real Data', 'Estimated New', 'Location', 'best', 'FontSize', 13);
+legend('Predictive Model', 'Real Data', 'Location', 'best', 'FontSize', 13);
 grid on;
 
-% Plot do Coeficiente Linear 'b' (Offset)
+% Plot of Linear Coefficient 'b' (Offset)
 subplot(1, 2, 2);
 b_plot = polyval(poly_b, CG_plot);
 plot(CG_plot, b_plot, '-k', 'LineWidth', 1); hold on;
 scatter(CG_conhecidos, b_conhecidos, 40, 'k', 'filled'); 
 
-% Adicionando os rótulos de sensibilidade nos pontos medidos (Offset)
+% Adding sensitivity labels to measured points (Offset)
 for i = 1:length(CG_conhecidos)
-    text(CG_conhecidos(i), b_conhecidos(i), sprintf('  S = %.4f', S_conhecidos(i)), ...
-        'VerticalAlignment', 'middle', 'HorizontalAlignment', 'left', 'FontSize', 9);
+    text(CG_conhecidos(i), b_conhecidos(i), sprintf('  S = %.4f m/N', S_conhecidos(i)), ...
+        'VerticalAlignment', 'middle', 'HorizontalAlignment', 'left', 'FontSize', 13);
 end
 
 %scatter(CG_alvo, b_estimado, 40, 'b*', 'LineWidth', 1.5); 
-title('Comportamento do Offset (b)');
-xlabel('Posição do CG (m)');
-ylabel('Coef. Linear (b)');
+title('Offset Behavior (b)', 'Fontsize', 13);
+xlabel('CG Position (m)');
+ylabel('Linear Coef. (b)');
 grid on;
 
-% Figura 2: Curva de Calibração Estimada vs Reais
-figure('Name', 'Curva de Calibração Estimada', 'Color', 'w', 'Position', [950, 100, 600, 500]);
+% Figure 2: Estimated Calibration Curve vs Reals
+figure('Name', 'Estimated Calibration Curve', 'Color', 'w', 'Position', [950, 100, 600, 500]);
 hold on;
 
-% Plotando as 3 retas reais
+% Plotting the 3 real lines
 d_plot_real = linspace(0, 15, 50);
-plot(d_plot_real, polyval(p_menor, d_plot_real), ':k', 'LineWidth', 1);
-plot(d_plot_real, polyval(p_inter, d_plot_real), ':k', 'LineWidth', 1);
-plot(d_plot_real, polyval(p_maior, d_plot_real), ':k', 'LineWidth', 1);
+plot(d_plot_real, polyval(p_menor, d_plot_real), '-k', 'LineWidth', 2);
+plot(d_plot_real, polyval(p_inter, d_plot_real), '-k', 'LineWidth', 2);
+plot(d_plot_real, polyval(p_maior, d_plot_real), '-k', 'LineWidth', 2);
 
-% Rótulos da Figura 2
+% Figure 2 Labels
 x_pos_menor = 4;
 y_pos_menor = polyval(p_menor, x_pos_menor);
-text(x_pos_menor, y_pos_menor + 40, 'S = 0,0179 m/N', 'FontSize', 10, 'HorizontalAlignment', 'center');
+%text(x_pos_menor, y_pos_menor + 40, 'S = 0.0179 m/N', 'FontSize', 13, 'HorizontalAlignment', 'center');
 
 x_pos_inter = 8.5;
 y_pos_inter = polyval(p_inter, x_pos_inter);
-text(x_pos_inter, y_pos_inter + 40, 'S = 0,0582 m/N', 'FontSize', 10, 'HorizontalAlignment', 'center');
+%text(x_pos_inter, y_pos_inter + 40, 'S = 0.0582 m/N', 'FontSize', 13, 'HorizontalAlignment', 'center');
 
 x_pos_maior = 12.5;
 y_pos_maior = polyval(p_maior, x_pos_maior);
-text(x_pos_maior, y_pos_maior + 40, 'S = 0,0939 m/N', 'FontSize', 10, 'HorizontalAlignment', 'center');
+%text(x_pos_maior, y_pos_maior + 40, 'S = 0.0939 m/N', 'FontSize', 13, 'HorizontalAlignment', 'center');
 
-% Plotando a nova reta estimada
+% Plotting the new estimated line
 d_plot_estimado = linspace(0, 15, 50);
 f_estimada = polyval([a_estimado, b_estimado], d_plot_estimado);
 %plot(d_plot_estimado, f_estimada, '-b', 'LineWidth', 2);
+%title(sprintf('Calibration Prediction for CG = %.4f m', CG_alvo));
 
-%title(sprintf('Previsão de Calibração para CG = %.4f m', CG_alvo));
-title(sprintf('Curvas de Calibração para Diferentes Sensibilidades'));
-xlabel('Deslocamento (\mum)');
-ylabel('Força F_{eq} (\muN)');
-%legend('Casos Reais Medidos', '', '', 'Curva Estimada (Nova)', 'Location', 'northwest');
-legend('Casos Reais Medidos', '', '', 'Location', 'northwest');
+title('Calibration Curves for Different Sensitivities', 'FontSize', 20);
+xlabel('Displacement (\mum)');
+ylabel('Force F_{eq} (\muN)');
+%legend('Measured Real Cases', '', '', 'Estimated Curve (New)', 'Location', 'northwest', 'FontSize', 13);
+legend('Measured Real Cases', '', '', 'Location', 'northwest', 'FontSize', 20);
 grid on;
 ylim([0 1000]); 
 hold off;
