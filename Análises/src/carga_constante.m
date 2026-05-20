@@ -1,5 +1,7 @@
 clear all; close all; clc;
 
+%% ESSE SCRIPT ANALISA O COMPORTAMENTO DE UMA AMOSTRA INDIVIDUALMENTE
+
 % =========================================================================
 % SCRIPT PRINCIPAL
 % =========================================================================
