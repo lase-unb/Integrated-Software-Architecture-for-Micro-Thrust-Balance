@@ -1,22 +1,23 @@
 clear all; clc;
-
+%% ESTE SCRIPT CALCULA A SENSIBILIDADE DA BALANÇA CONFORME O CG DE Y, OBTIDO PELO SOFTWARE SOLIDWORKS. É POSSÍVEL OBTER ATRAVÉS DA FUNÇÃO "calcular_cg_1d"
 g = 9.784; % Gravidade local. Coordenadas: (-15.999557, -48.046830).
 m_p = 0.75935;  % [kg] (massa do propulsor + base ( kg)) PESAR NO LAB
-y_p = -(0.368);  % [m] (distância do propulsor até o pivô. Manter negativo, pois a coordenada está localizada abaixo do pivô.)
+y_p = -(0.368);  % [m] dist. do pivô até o ponto de aplicação de força (distância do propulsor até o pivô. Manter negativo, pois a coordenada está localizada abaixo do pivô.)
 
 m_c = 0;   % [kg] (massa do contra-peso)
-y_c = 0;   % [m] (distância do contra-peso até o pivô)
+%y_c = 0;   % [m] (distância do contra-peso até o pivô)
 
-m_b = 0.16133*2; % [kg] (massa do braço. Como é simétrico, considerou-se como apenas um braço) PESAR NO LAB
+%m_b = 0.16133*2; % [kg] (massa do braço. Como é simétrico, considerou-se como apenas um braço) PESAR NO LAB
 
 % ---- Chamada das funções
-cg_y = calcular_cg_1d(m_p, y_p, m_c, y_c, m_b);
+%cg_y = calcular_cg_1d(m_p, y_p, m_c, y_c, m_b);
+cg_y = ; % valor retirado do software SOLIDWORKS. Verficar o arquivo "0.Thrust_Balance_cg_y.x_t"
 S = calcular_sensibilidade(y_p, m_p, m_c, g, cg_y);
 
 % ---- Exibição dos resultados
 % Definição do diretório e arquivo
 pasta_saida = 'C:\Users\thami\OneDrive - unb.br\FGA\Balança de Microempuxo - LaSE\Integrated-Software-Architecture-for-Micro-Thrust-Balance\Análises\resultados\carga_constante\sensibilidade intermediaria';
-nome_arquivo = 'resultados_intermediaria_sensibilidade.txt';
+nome_arquivo = 'resultados_intermediaria_sensibilidade_1.txt';
 caminho_completo = fullfile(pasta_saida, nome_arquivo);
 
 % Garante que a pasta exista
@@ -67,6 +68,7 @@ else
 end
 
 % --- FUNÇÕES ---
+%{
 function cg_y = calcular_cg_1d(m_peso, y_peso, m_contra, y_contra, m_braco)
     % Calcula o centro de gravidade vertical.
     
@@ -82,7 +84,7 @@ function cg_y = calcular_cg_1d(m_peso, y_peso, m_contra, y_contra, m_braco)
     
     cg_y = momento_total / massa_total;
 end
-
+%}
 function S = calcular_sensibilidade(LT, MT, MCP, g, cg)
-    S = LT^2/((MT+MCP)*g*abs(cg));
+S = LT^2/((MT+MCP)*g*abs(cg));
 end

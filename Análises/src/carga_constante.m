@@ -1,33 +1,20 @@
 clear all; close all; clc;
-
 %% ESSE SCRIPT ANALISA O COMPORTAMENTO DE UMA AMOSTRA INDIVIDUALMENTE
-
 % =========================================================================
 % SCRIPT PRINCIPAL
 % =========================================================================
 
 % 1. Importa os dados brutos
-% Define o caminho da pasta onde estão os dados
 pasta_dados = 'C:\Users\thami\OneDrive - unb.br\FGA\Balança de Microempuxo - LaSE\Integrated-Software-Architecture-for-Micro-Thrust-Balance\Análises\data\carga_constante';
-
-% Define o nome do arquivo
 nome_arquivo = 'P1_d3_2.txt';
-
-%  Cria o caminho completo
 caminho_completo = fullfile(pasta_dados, nome_arquivo);
 
-% Importa os dados brutos usando o caminho completo
 dados_raw = readmatrix(caminho_completo, 'OutputType', 'string', 'Delimiter', '\t');
-
-% Substitui ',' por '.' e converte tudo para números (double)
 dados_num = double(strrep(dados_raw, ',', '.'));
-
-% Limpa qualquer linha vazia
 dados = rmmissing(dados_num); 
 
-% Interrompe o script caso haja problema com a matriz de input
 if isempty(dados)
-    error('ERRO: A matriz ficou vazia. O arquivo P1_d1_09-04-2026.txt pode não estar separado por TAB. Tente mudar o "Delimiter" acima para espaço (" ") ou ponto-e-vírgula (";").');
+    error('ERRO: A matriz ficou vazia. Verifique o delimitador do arquivo txt.');
 end
 
 t = dados(:, 1); % Vetor de tempo
@@ -36,16 +23,15 @@ x = dados(:, 2); % Vetor de deslocamento
 % 2. Dados de medição 
 m_conhecida = 0.00002; % Massa conhecida [kg]
 g_local = 9.784;       % Aceleração da gravidade local [m/s^2]
-l = 0.01552;           % Distãncia do pivô até o ponto de aplicação da massa conhecida [m]
-L = 0.3675;            % Comprimento do braço do pêndulo [m]
+l = 0.01552;           % Distância do pivô até o ponto de aplicação da massa conhecida [m]
+L = 0.368;             % Comprimento do braço do pêndulo [m]
 
 % 3. Cálculos principais
-% Passamos a variável 'nome_arquivo' para a função de deslocamento (título do gráfico)
-delta_d = deslocamento(t, x, nome_arquivo);
-Feq_Newtons = forca_equivalente(m_conhecida, g_local, l, L);
+% Agora a função 'deslocamento' retorna também a razão de amortecimento (zeta)
+[delta_d, zeta] = deslocamento(t, x, nome_arquivo);
 
-% Converte a força para micro-Newtons (µN) para bater com a unidade da rigidez
-Feq = Feq_Newtons * 1e6; 
+Feq_Newtons = forca_equivalente(m_conhecida, g_local, l, L);
+Feq = Feq_Newtons * 1e6; % Converte para µN
 
 % Função de rigidez
 k = rigidez_linear(Feq, delta_d);
@@ -54,12 +40,22 @@ k = rigidez_linear(Feq, delta_d);
 fprintf('\n--- RESULTADOS ---\n');
 fprintf('Força equivalente calculada: %.5f µN\n', Feq); 
 fprintf('Deslocamento Medido (Delta d): %.5f µm\n', delta_d);
-fprintf('Rigidez Calculada (k):         %.5f µN/µm\n\n', k);
+fprintf('Rigidez Calculada (k):         %.5f µN/µm\n', k);
+if ~isnan(zeta)
+    fprintf('Razão de Amortecimento (zeta): %.5f\n\n', zeta);
+else
+    fprintf('Razão de Amortecimento (zeta): Não foi possível calcular (picos insuficientes)\n\n');
+end
 
 % =========================================================================
 % BLOCO RESULTADOS NO GRÁFICO
 % =========================================================================
-str_resultados = sprintf('--- RESULTADOS ---\nForça Eq.: %.5f \\muN\n\\Delta d: %.5f \\mum\nRigidez (k): %.5f \\muN/\\mum', Feq, delta_d, k);
+if ~isnan(zeta)
+    str_resultados = sprintf('--- RESULTADOS ---\nForça Eq.: %.5f \\muN\n\\Delta d: %.5f \\mum\nRigidez (k): %.5f \\muN/\\mum\nAmortecimento (\\zeta): %.5f', Feq, delta_d, k, zeta);
+else
+    str_resultados = sprintf('--- RESULTADOS ---\nForça Eq.: %.5f \\muN\n\\Delta d: %.5f \\mum\nRigidez (k): %.5f \\muN/\\mum\nAmortecimento (\\zeta): N/A', Feq, delta_d, k);
+end
+
 caixa = annotation('textbox', [0.65, 0.15, 0.25, 0.15], ...
     'String', str_resultados, ...
     'FitBoxToText', 'on', ...           
@@ -72,37 +68,30 @@ caixa.ButtonDownFcn = 'selectobject';
 % =========================================================================
 % SALVAMENTO DA FIGURA
 % =========================================================================
-% Define the folder
 folder = 'C:\Users\thami\OneDrive - unb.br\FGA\Balança de Microempuxo - LaSE\Integrated-Software-Architecture-for-Micro-Thrust-Balance\Análises\resultados\carga_constante'; 
-
 [~, nome_base, ~] = fileparts(nome_arquivo);
 filename = [nome_base, '.png'];
-
-% Create the full path
 fullPath = fullfile(folder, filename);
-
-% Save the current figure (gcf) to that path
 exportgraphics(gcf, fullPath, 'Resolution', 300); 
-
-% Imprime mensagem de confirmação de salvamento
 fprintf('Gráfico salvo com sucesso em:\n%s\n', fullPath);
 
 % =========================================================================
 % DEFINIÇÃO DAS FUNÇÕES
 % =========================================================================
-
 function [Feq] = forca_equivalente(m_conhecida, g_local, l, L)
     Feq = m_conhecida * g_local * l * (1/L);
 end
 
-function [diff_val] = deslocamento(time, d, titulo_grafico)
+function [diff_val, zeta] = deslocamento(time, d, titulo_grafico)
     % Parâmetros do filtro e das janelas de tempo
     find_diff = true;
     time1 = [30, 100];
     time2 = [150, 230];
+    time_transiente = [102, 140]; % <-- NOVO: Janela onde ocorre a oscilação livre
+    
     cutoff_freq = 0.05;
     order = 5;
-
+    
     % =========================================================================
     % Filtragem (Filtro Butterworth Passa-Baixa)
     % =========================================================================
@@ -113,11 +102,12 @@ function [diff_val] = deslocamento(time, d, titulo_grafico)
     [b, a] = butter(order, Wn, 'low');
     
     av = filtfilt(b, a, d); % Aplica o filtro
-
+    
     % =========================================================================
-    % Cálculos de Deslocamento e Incerteza
+    % Cálculos de Deslocamento, Incerteza e Amortecimento
     % =========================================================================
     diff_val = 0; 
+    zeta = NaN;
     
     if find_diff
         % --- Janela 1 ---
@@ -143,8 +133,43 @@ function [diff_val] = deslocamento(time, d, titulo_grafico)
         % --- Diferença (Deslocamento) e Propagação do Erro ---
         diff_val = abs(av1 - av2);
         disp_std = sqrt((std1^2) + (std2^2));
+        
+        % =================================================================
+        % CÁLCULO DO AMORTECIMENTO (Método do Decremento Logarítmico)
+        % =================================================================
+        [~, start_t] = min(abs(time - time_transiente(1)));
+        [~, end_t]   = min(abs(time - time_transiente(2)));
+        
+        t_osc = time(start_t:end_t);
+        d_osc = d(start_t:end_t); % Usamos dados raw para não perder amplitude no filtro
+        
+        % Define a proeminência mínima para ignorar ruídos (metade do desvio padrão)
+        prominence_thresh = std(d_osc) * 0.5; 
+        
+        % Encontra os picos (depende se o degrau foi para cima ou para baixo)
+        if av2 > av1
+            [pks, locs_idx] = findpeaks(d_osc, 'MinPeakProminence', prominence_thresh);
+        else
+            [pks_inv, locs_idx] = findpeaks(-d_osc, 'MinPeakProminence', prominence_thresh);
+            pks = -pks_inv;
+        end
+        
+        t_pks = t_osc(locs_idx);
+        
+        % Calcula as amplitudes em relação à nova posição de equilíbrio (av2)
+        Amplitudes = abs(pks - av2);
+        
+        if length(Amplitudes) >= 2
+            % Decremento Logarítmico
+            A1 = Amplitudes(1);
+            An = Amplitudes(end);
+            n = length(Amplitudes); % Número de picos
+            
+            delta = (1 / (n - 1)) * log(A1 / An);
+            zeta = delta / sqrt(4 * pi^2 + delta^2);
+        end
     end
-
+    
     % =========================================================================
     % Plotagem do Gráfico Avançado
     % =========================================================================
@@ -173,7 +198,13 @@ function [diff_val] = deslocamento(time, d, titulo_grafico)
         
         % Linha de Deslocamento Total
         plot([time(end), time(end)], [av1, av2], 'g', 'LineWidth', 5.0, ...
-            'DisplayName', sprintf('Deslocamento = %.5f µm (Erro: %.5f µm)', diff_val, disp_std));
+            'DisplayName', sprintf('Deslocamento = %.5f µm', diff_val));
+            
+        % Plot dos picos encontrados para o amortecimento
+        if length(Amplitudes) >= 2
+            plot(t_pks, pks, 'ro', 'MarkerSize', 6, 'LineWidth', 1.5, ...
+                'DisplayName', 'Picos de Oscilação (\zeta)');
+        end
     end
     
     xlabel('Tempo (s)');
@@ -187,6 +218,5 @@ function [diff_val] = deslocamento(time, d, titulo_grafico)
 end
 
 function [k] = rigidez_linear(Feq, delta_d)
-    % O resultado é a rigidez linear equivalente no ponto do sensor.
     k = Feq / delta_d;
 end
