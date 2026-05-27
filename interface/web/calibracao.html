@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LaSE — Calibração</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-brand">
+    <div class="nav-brand-icon">B</div>
+    <div>
+      <div class="nav-brand-text">Balança de Microempuxo</div>
+      <div class="nav-brand-sub">LaSE · INPE</div>
+    </div>
+  </div>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">Dashboard</a>
+    <a href="calibracao.html" class="nav-link active">Calibração</a>
+    <a href="analise.html" class="nav-link">Análise e exportação</a>
+  </div>
+  <div class="nav-right">
+    <div class="status-chip"><span class="dot dot-amber"></span>Aguardando calibração</div>
+  </div>
+</nav>
+
+<div class="flow-bar">
+  <a href="calibracao.html" class="flow-step active">
+    <div class="flow-step-num">1</div>
+    Calibração
+  </a>
+  <span class="flow-arrow">›</span>
+  <a href="index.html" class="flow-step">
+    <div class="flow-step-num">2</div>
+    Aquisição de dados
+  </a>
+  <span class="flow-arrow">›</span>
+  <a href="analise.html" class="flow-step">
+    <div class="flow-step-num">3</div>
+    Análise e exportação
+  </a>
+</div>
+
+<div class="page">
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
+
+    <!-- COL 1: Contrapesos -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Configuração dos contrapesos</div>
+          <div class="card-subtitle">Insira os contrapesos fixados no braço da balança</div>
+        </div>
+        <span class="tag tag-must">Obrigatório</span>
+      </div>
+
+      <div class="fieldset">
+        <div class="fieldset-title">
+          <input type="checkbox" id="cp1-active" checked onchange="toggleCP(1,this.checked)">
+          <label for="cp1-active" style="cursor:pointer;color:var(--text);font-size:13px;font-weight:600;">Contrapeso 1</label>
+        </div>
+        <div id="cp1-fields">
+          <div class="field">
+            <div class="field-label">
+              Massa do contrapeso
+              <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-text">Massa do contrapeso físico em gramas. Use balança analítica para medição precisa.</span></span>
+            </div>
+            <div class="field-group">
+              <input type="number" id="cp1-m" value="50" step="1" min="0" max="2000" oninput="recalc()">
+              <span class="field-unit">g</span>
+            </div>
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <div class="field-label">
+              Distância até o pivô
+              <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-text">Distância do centro de massa do contrapeso ao ponto de pivô da balança, medida ao longo do braço.</span></span>
+            </div>
+            <div class="field-group">
+              <input type="number" id="cp1-r" value="120" step="1" min="0" max="500" oninput="recalc()">
+              <span class="field-unit">mm</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="fieldset">
+        <div class="fieldset-title">
+          <input type="checkbox" id="cp2-active" onchange="toggleCP(2,this.checked)">
+          <label for="cp2-active" style="cursor:pointer;color:var(--text);font-size:13px;font-weight:600;">Contrapeso 2 (opcional)</label>
+        </div>
+        <div id="cp2-fields" class="disabled">
+          <div class="field">
+            <div class="field-label">Massa do contrapeso</div>
+            <div class="field-group">
+              <input type="number" id="cp2-m" value="20" step="1" min="0" max="2000" oninput="recalc()">
+              <span class="field-unit">g</span>
+            </div>
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <div class="field-label">Distância até o pivô</div>
+            <div class="field-group">
+              <input type="number" id="cp2-r" value="80" step="1" min="0" max="500" oninput="recalc()">
+              <span class="field-unit">mm</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sep"></div>
+      <div style="margin-bottom:10px;">
+        <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px;">
+          Centro de gravidade (CG)
+          <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-text">O CG deve ficar levemente abaixo do pivô para que a balança seja estável. O sistema calcula automaticamente com base nos contrapesos inseridos.</span></span>
+        </div>
+        <div class="cb-row">
+          <input type="checkbox" id="cg-manual" onchange="toggleCGManual(this.checked)">
+          <label for="cg-manual">Prefiro inserir o CG manualmente (valor medido)</label>
+        </div>
+        <div id="cg-manual-field" class="disabled">
+          <div class="field" style="margin-bottom:0;">
+            <div class="field-label">Posição do CG (eixo vertical)
+              <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-text">Valor negativo = CG abaixo do pivô (estável). Valor positivo = CG acima do pivô (instável).</span></span>
+            </div>
+            <div class="field-group">
+              <input type="number" id="cg-val" value="-0.010" step="0.001" oninput="recalc()">
+              <span class="field-unit">m</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="cg-alert"></div>
+
+      <div style="margin-top:14px;">
+        <div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:8px;">
+          Visualização do braço da balança
+        </div>
+        <canvas id="arm-canvas" style="width:100%;height:140px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);display:block;"></canvas>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px;text-align:center;">
+          ◆ ponto laranja = centro de gravidade calculado
+        </div>
+      </div>
+    </div>
+
+    <!-- COL 2: Resultados + Sequência -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Parâmetros da balança</div>
+          <div class="card-subtitle">Calculados automaticamente com base nos contrapesos</div>
+        </div>
+      </div>
+
+      <div class="grid-2" style="gap:10px;margin-bottom:14px;">
+        <div class="metric" id="c-cg">
+          <div class="metric-label">
+            Centro de gravidade
+            <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-text">Deve ser negativo (CG abaixo do pivô) para estabilidade da balança.</span></span>
+          </div>
+          <div class="metric-value" id="res-cg" style="font-size:18px;">—<span class="metric-unit">m</span></div>
+          <div class="metric-desc" id="desc-cg">Calculando…</div>
+        </div>
+        <div class="metric" id="c-I">
+          <div class="metric-label">
+            Momento de inércia (I)
+            <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-text">Resistência à rotação do pêndulo. Depende das massas e distâncias dos contrapesos.</span></span>
+          </div>
+          <div class="metric-value" id="res-I" style="font-size:16px;">—<span class="metric-unit">kg·m²</span></div>
+          <div class="metric-desc">Momento de inércia total</div>
+        </div>
+        <div class="metric" id="c-k">
+          <div class="metric-label">
+            Rigidez do sistema (k)
+            <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-text">Constante de torção equivalente. Determinada pelo CG e pela massa total da balança.</span></span>
+          </div>
+          <div class="metric-value" id="res-k" style="font-size:18px;">—<span class="metric-unit">N·m/rad</span></div>
+          <div class="metric-desc">Constante de torção</div>
+        </div>
+        <div class="metric" id="c-fn">
+          <div class="metric-label">
+            Frequência natural (fnat)
+            <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-text">Frequência de oscilação natural. Deve estar entre 0.5 e 5 Hz. Fora deste intervalo, ajuste o CG.</span></span>
+          </div>
+          <div class="metric-value" id="res-fn" style="font-size:18px;">—<span class="metric-unit">Hz</span></div>
+          <div class="metric-desc" id="desc-fn">Ideal: 0.5 – 5 Hz</div>
+        </div>
+        <div class="metric" id="c-S">
+          <div class="metric-label">
+            Sensibilidade (S)
+            <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-text">Quanto a balança se desloca por unidade de força. Quanto maior, mais sensível — porém menos estável.</span></span>
+          </div>
+          <div class="metric-value" id="res-S" style="font-size:18px;">—<span class="metric-unit">µm/N</span></div>
+          <div class="metric-desc">Deslocamento por força</div>
+        </div>
+        <div class="metric" id="c-fd">
+          <div class="metric-label">
+            Freq. amortecida (fd)
+            <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-text">Frequência real de oscilação considerando o amortecimento do sistema (ζ ≈ 0.05).</span></span>
+          </div>
+          <div class="metric-value" id="res-fd" style="font-size:18px;">—<span class="metric-unit">Hz</span></div>
+          <div class="metric-desc">Com amortecimento ζ=0.05</div>
+        </div>
+      </div>
+
+      <div id="rec-alert" style="display:none;"></div>
+
+      <div class="sep"></div>
+
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px;">
+        Sequência de calibração
+        <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-text">Execute as etapas em ordem. A calibração completa leva menos de 30 minutos.</span></span>
+      </div>
+
+      <div>
+        <div class="step-item">
+          <div class="step-num step-idle" id="sn1">1</div>
+          <div class="step-body">
+            <div class="step-title">Calibração estática</div>
+            <div class="step-desc">Aplica uma massa padrão conhecida e mede a deflexão — calcula I e k</div>
+          </div>
+          <span class="step-status idle" id="sb1">Pendente</span>
+        </div>
+        <div class="step-item">
+          <div class="step-num step-idle" id="sn2">2</div>
+          <div class="step-body">
+            <div class="step-title">Calibração dinâmica</div>
+            <div class="step-desc">Registra a oscilação livre do pêndulo — determina fnat via FFT</div>
+          </div>
+          <span class="step-status idle" id="sb2">Pendente</span>
+        </div>
+        <div class="step-item">
+          <div class="step-num step-idle" id="sn3">3</div>
+          <div class="step-body">
+            <div class="step-title">Validação com DCE</div>
+            <div class="step-desc">Verifica a curva força–voltagem do DCE com tabela de referência</div>
+          </div>
+          <span class="step-status idle" id="sb3">Pendente</span>
+        </div>
+        <div class="step-item">
+          <div class="step-num step-idle" id="sn4">4</div>
+          <div class="step-body">
+            <div class="step-title">Aprovação final</div>
+            <div class="step-desc">Incerteza &lt;5% confirmada — balança pronta para uso</div>
+          </div>
+          <span class="step-status idle" id="sb4">Pendente</span>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary btn-lg" id="btn-seq" onclick="runSequence()" style="flex:1;">
+          ▶ Iniciar sequência de calibração
+        </button>
+        <button class="btn" onclick="resetSequence()">↺</button>
+      </div>
+
+      <div id="seq-progress" style="display:none;margin-top:12px;">
+        <div class="field-label" style="margin-bottom:6px;">
+          <span id="seq-label">Executando…</span>
+          <span id="seq-pct" style="font-family:var(--mono);">0%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="seq-fill" style="width:0%;background:var(--accent);"></div>
+        </div>
+      </div>
+
+      <div id="seq-done" style="display:none;" class="alert alert-ok" style="margin-top:10px;">
+        <span class="alert-icon">✓</span>
+        <span><strong>Calibração concluída!</strong> A balança está pronta para uso. <a href="index.html" style="color:var(--green);font-weight:600;">Ir para aquisição →</a></span>
+      </div>
+    </div>
+
+    <!-- COL 3: DCE -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Configuração do DCE</div>
+          <div class="card-subtitle">Dispositivo de Calibração Eletrostática — gera a força de referência</div>
+        </div>
+        <span class="tag tag-must">Obrigatório</span>
+      </div>
+
+      <div class="fieldset" style="margin-bottom:14px;">
+        <div class="fieldset-title">Tipo de teste que será realizado</div>
+        <div class="mode-toggle">
+          <button class="mode-btn active" id="dce-pulsado" onclick="setDCEMode('pulsado')">Pulsado (Ibit)</button>
+          <button class="mode-btn" id="dce-continuo" onclick="setDCEMode('continuo')">Contínuo (ss)</button>
+        </div>
+      </div>
+
+      <div class="fieldset">
+        <div class="fieldset-title">
+          Força a ser aplicada
+          <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-text">Força que o DCE vai aplicar ao pêndulo durante a calibração. O sistema calcula a voltagem necessária automaticamente.</span></span>
+        </div>
+
+        <div class="field">
+          <div class="field-label">
+            <span>Força desejada</span>
+            <strong style="font-family:var(--mono);" id="forca-label">100 µN</strong>
+          </div>
+          <input type="range" id="forca-slider" min="10" max="1000" step="1" value="100" oninput="sliderForce(this.value)" style="margin-bottom:8px;">
+          <div class="field-group">
+            <input type="number" id="forca-num" value="100" step="1" min="10" max="1000" oninput="inputForce(this.value)">
+            <span class="field-unit">µN</span>
+          </div>
+          <div class="field-hint">Faixa válida: 10 µN a 1.000 µN (1 mN)</div>
+        </div>
+
+        <div class="field" style="margin-bottom:0;">
+          <div class="field-label">
+            Distância entre placas do DCE (DE)
+            <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-text">Distância entre os eletrodos do DCE. Valores com dados experimentais: 1.00 mm e 0.99 mm. Outros valores são estimados com erro ≤2%.</span></span>
+          </div>
+          <div class="field-group">
+            <input type="number" id="de-val" value="1.00" step="0.01" min="0.5" max="2.0" oninput="calcDCE()">
+            <span class="field-unit">mm</span>
+          </div>
+          <div class="field-hint">Dados experimentais disponíveis para: 1.00 mm e 0.99 mm</div>
+        </div>
+      </div>
+
+      <div class="sep"></div>
+
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px;">
+        Voltagem calculada para aplicar no DCE
+        <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-text">O sistema calcula automaticamente qual voltagem deve ser aplicada para gerar a força desejada. Limite de segurança: 1.000 V.</span></span>
+      </div>
+
+      <div class="volt-display volt-ok" id="volt-val">312.4 V</div>
+
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:6px;">
+        <span>0 V (mínimo)</span>
+        <span style="color:var(--amber);">800 V (atenção)</span>
+        <span style="color:var(--red);">1.000 V (limite)</span>
+      </div>
+      <div class="progress-track" style="height:12px;margin-bottom:6px;">
+        <div class="progress-fill" id="volt-fill" style="width:31.2%;background:var(--green);"></div>
+      </div>
+
+      <div id="volt-alert"></div>
+
+      <div class="sep"></div>
+
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px;">
+        Como o sinal será analisado neste modo
+      </div>
+      <div id="regime-box" class="fieldset" style="margin-bottom:0;">
+        <div class="fieldset-title" id="regime-title">Modo pulsado — o que o sistema vai fazer</div>
+        <div id="regime-content">
+          <div style="font-size:12px;color:var(--text2);line-height:1.6;">
+            O DCE vai aplicar um pulso de força. O pêndulo vai oscilar e o sistema vai registrar a <strong>maior deflexão (xmax)</strong> gerada.<br><br>
+            Isso representa o <strong>impulso total entregue ao pêndulo</strong>, usado para calcular Ft e Ibit.
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
+            <div class="metric"><div class="metric-label">Parâmetro medido</div><div style="font-family:var(--mono);font-size:14px;font-weight:500;margin-top:4px;">xmax</div></div>
+            <div class="metric"><div class="metric-label">Resolução</div><div style="font-family:var(--mono);font-size:14px;font-weight:500;margin-top:4px;">0.01 µm</div></div>
+            <div class="metric"><div class="metric-label">Repetições</div><div style="font-family:var(--mono);font-size:14px;font-weight:500;margin-top:4px;">N = 10</div></div>
+            <div class="metric"><div class="metric-label">Análise</div><div style="font-family:var(--mono);font-size:14px;font-weight:500;margin-top:4px;">FFT</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="window.location='index.html'" style="flex:1;">
+          Ir para aquisição de dados →
+        </button>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:6px;text-align:center;">
+        Complete a calibração antes de prosseguir
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const G = 9.81, M_BAL = 0.800, R_BAL = 0.060;
+let cp2on = false, seqStep = 0, seqTimer = null, dceMode = 'pulsado';
+
+function toggleCP(n, on) {
+  document.getElementById('cp'+n+'-fields').classList.toggle('disabled', !on);
+  if (n === 2) cp2on = on;
+  recalc();
+}
+function toggleCGManual(on) {
+  document.getElementById('cg-manual-field').classList.toggle('disabled', !on);
+  recalc();
+}
+
+function recalc() {
+  const cp1on = document.getElementById('cp1-active').checked;
+  const m1 = (cp1on ? parseFloat(document.getElementById('cp1-m').value)||0 : 0) / 1000;
+  const r1 = (parseFloat(document.getElementById('cp1-r').value)||0) / 1000;
+  const m2 = (cp2on ? parseFloat(document.getElementById('cp2-m').value)||0 : 0) / 1000;
+  const r2 = (cp2on ? parseFloat(document.getElementById('cp2-r').value)||0 : 0) / 1000;
+
+  const mTot  = m1 + m2 + M_BAL;
+  const cgCal = (m1*r1 + m2*r2) / mTot;
+  const manual = document.getElementById('cg-manual').checked;
+  const cg = manual ? (parseFloat(document.getElementById('cg-val').value)||0) : -cgCal;
+
+  const I  = m1*r1*r1 + m2*r2*r2 + M_BAL*R_BAL*R_BAL;
+  const k  = mTot * G * Math.abs(cg);
+  const fn = k > 0 ? (1/(2*Math.PI))*Math.sqrt(k/I) : 0;
+  const fd = fn * Math.sqrt(1 - 0.05*0.05);
+  const S  = fn > 0 ? (1/(mTot*(2*Math.PI*fn)*(2*Math.PI*fn)))*1e6 : 0;
+
+  const fmt = (v, d) => (isFinite(v) && v !== 0) ? v.toFixed(d) : '—';
+  document.getElementById('res-cg').innerHTML = fmt(cg,4) + '<span class="metric-unit">m</span>';
+  document.getElementById('res-I').innerHTML  = fmt(I,6)  + '<span class="metric-unit">kg·m²</span>';
+  document.getElementById('res-k').innerHTML  = fmt(k,4)  + '<span class="metric-unit">N·m/rad</span>';
+  document.getElementById('res-fn').innerHTML = fmt(fn,3) + '<span class="metric-unit">Hz</span>';
+  document.getElementById('res-S').innerHTML  = fmt(S,2)  + '<span class="metric-unit">µm/N</span>';
+  document.getElementById('res-fd').innerHTML = fmt(fd,3) + '<span class="metric-unit">Hz</span>';
+
+  const cgAlert = document.getElementById('cg-alert');
+  const cgEl    = document.getElementById('c-cg');
+  const fnEl    = document.getElementById('c-fn');
+
+  if (cg > 0.001) {
+    cgAlert.className = 'alert alert-danger';
+    cgAlert.innerHTML = '<span class="alert-icon">⚠</span><div><strong>CG acima do pivô — balança instável!</strong><br>O centro de gravidade precisa ficar abaixo do ponto de pivô. Reposicione os contrapesos para o outro lado do braço.</div>';
+    cgEl.className = 'metric danger';
+    document.getElementById('desc-cg').textContent = 'Instável — mova os contrapesos!';
+  } else if (fn > 0 && fn < 0.5) {
+    cgAlert.className = 'alert alert-warn';
+    cgAlert.innerHTML = '<span class="alert-icon">⚠</span><div><strong>Frequência natural muito baixa ('+fn.toFixed(3)+' Hz).</strong><br>O pêndulo oscila muito lentamente — sensibilidade excessiva. Aproxime os contrapesos do pivô ou reduza a massa.</div>';
+    fnEl.className = 'metric warn';
+    document.getElementById('desc-fn').textContent = 'Abaixo do ideal — ajuste CG';
+  } else if (fn > 5) {
+    cgAlert.className = 'alert alert-warn';
+    cgAlert.innerHTML = '<span class="alert-icon">⚠</span><div><strong>Frequência natural muito alta ('+fn.toFixed(3)+' Hz).</strong><br>Baixa sensibilidade. Aumente a distância dos contrapesos ao pivô ou aumente a massa.</div>';
+    fnEl.className = 'metric warn';
+    document.getElementById('desc-fn').textContent = 'Acima do ideal — ajuste CG';
+  } else if (fn > 0) {
+    cgAlert.className = 'alert alert-ok';
+    cgAlert.innerHTML = '<span class="alert-icon">✓</span><span>Configuração válida. A balança está dentro dos parâmetros operacionais.</span>';
+    cgEl.className = 'metric ok';
+    fnEl.className = 'metric ok';
+    document.getElementById('desc-cg').textContent = 'Abaixo do pivô ✓';
+    document.getElementById('desc-fn').textContent = 'Faixa operacional ✓';
+  } else {
+    cgAlert.innerHTML = '';
+    cgEl.className = 'metric'; fnEl.className = 'metric';
+  }
+
+  const recAlert = document.getElementById('rec-alert');
+  if (fn > 0 && (fn < 0.5 || fn > 5)) {
+    recAlert.style.display = 'flex';
+    recAlert.className = 'alert alert-info';
+    recAlert.innerHTML = '<span class="alert-icon">ℹ</span><div><strong>Sugestão de ajuste (baseado em docs INPE):</strong><ul style="margin:5px 0 0 16px;font-size:12px;line-height:1.8;">'
+      + (fn < 0.5 ? '<li>Reduza a distância dos contrapesos ao pivô</li><li>Ou reduza a massa dos contrapesos</li>' : '')
+      + (fn > 5   ? '<li>Aumente a distância dos contrapesos ao pivô</li><li>Ou aumente a massa dos contrapesos</li>' : '')
+      + '</ul></div>';
+  } else {
+    recAlert.style.display = 'none';
+  }
+
+  drawArm(r1*1000, m1*1000, r2*1000, m2*1000, cg, cp1on);
+}
+
+function drawArm(r1mm, m1g, r2mm, m2g, cg, cp1on) {
+  const c = document.getElementById('arm-canvas');
+  const dpr = window.devicePixelRatio || 1;
+  c.width  = c.offsetWidth * dpr;
+  c.height = c.offsetHeight * dpr;
+  const ctx = c.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const W = c.offsetWidth, H = c.offsetHeight;
+  ctx.clearRect(0,0,W,H);
+
+  const pivX = W/2, pivY = H/2;
+  const sc = Math.min((W * 0.38) / 200, 1.2);
+
+  ctx.strokeStyle = '#cdd3e0'; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.moveTo(pivX - 240*sc, pivY); ctx.lineTo(pivX + 240*sc, pivY); ctx.stroke();
+
+  ctx.fillStyle = '#2563eb';
+  ctx.beginPath(); ctx.arc(pivX, pivY, 6, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#4a5568'; ctx.font = '10px Inter';
+  ctx.textAlign = 'center'; ctx.fillText('pivô', pivX, pivY - 10);
+
+  function drawCP(rmm, mg, side, lbl) {
+    if (rmm <= 0 || mg <= 0) return;
+    const x = pivX + side * rmm * sc;
+    ctx.strokeStyle = '#2563eb'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(x, pivY); ctx.lineTo(x, pivY + 22); ctx.stroke();
+    const sz = Math.max(10, Math.min(mg / 8, 24));
+    ctx.fillStyle = '#eff6ff'; ctx.strokeStyle = '#2563eb'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.roundRect(x - sz/2, pivY + 22, sz, sz * 0.65, 2);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#1e40af'; ctx.font = '9px Inter'; ctx.textAlign = 'center';
+    ctx.fillText(lbl, x, pivY + 22 + sz * 0.65 + 11);
+    ctx.fillText(mg.toFixed(0)+'g', x, pivY + 22 + sz * 0.65 + 21);
+
+    ctx.setLineDash([3,3]); ctx.strokeStyle = '#cdd3e0'; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.moveTo(pivX, pivY - 16); ctx.lineTo(x, pivY - 16); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#9aa3b5'; ctx.font = '9px Inter';
+    ctx.fillText(rmm.toFixed(0)+'mm', (pivX+x)/2, pivY - 19);
+  }
+
+  if (cp1on) drawCP(r1mm, m1g, -1, 'CP1');
+  if (cp2on) drawCP(r2mm, m2g,  1, 'CP2');
+
+  if (cg !== 0) {
+    const cgX = pivX + cg * 1000 * sc;
+    ctx.fillStyle = '#d97706';
+    ctx.beginPath(); ctx.arc(cgX, pivY, 6, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#78350f'; ctx.font = '9px Inter';
+    ctx.textAlign = cgX > pivX ? 'left' : 'right';
+    ctx.fillText('CG', cgX + (cgX > pivX ? 9 : -9), pivY + 4);
+  }
+}
+
+function sliderForce(v) {
+  document.getElementById('forca-num').value = v;
+  document.getElementById('forca-label').textContent = v + ' µN';
+  calcDCE();
+}
+function inputForce(v) {
+  v = Math.min(1000, Math.max(10, parseFloat(v)||100));
+  document.getElementById('forca-slider').value = v;
+  document.getElementById('forca-label').textContent = v.toFixed(0) + ' µN';
+  calcDCE();
+}
+
+function calcDCE() {
+  const F  = parseFloat(document.getElementById('forca-num').value)||100;
+  const de = parseFloat(document.getElementById('de-val').value)||1;
+  const V  = Math.round(Math.sqrt(F / 0.45) * de * 10) / 10;
+
+  const vEl    = document.getElementById('volt-val');
+  const fillEl = document.getElementById('volt-fill');
+  const alertEl = document.getElementById('volt-alert');
+  const pct = Math.min(V / 1000 * 100, 100);
+  fillEl.style.width = pct.toFixed(1) + '%';
+  vEl.textContent = V.toFixed(1) + ' V';
+
+  if (V > 1000) {
+    vEl.className = 'volt-display volt-danger';
+    fillEl.style.background = 'var(--red)';
+    alertEl.className = 'alert alert-danger';
+    alertEl.innerHTML = '<span class="alert-icon">⛔</span><div><strong>Bloqueado — limite de segurança de 1.000 V atingido.</strong><br>A aplicação desta voltagem foi bloqueada automaticamente para proteger os eletrodos. Reduza a força desejada ou aumente a distância DE.</div>';
+  } else if (V > 800) {
+    vEl.className = 'volt-display volt-warn';
+    fillEl.style.background = 'var(--amber)';
+    alertEl.className = 'alert alert-warn';
+    alertEl.innerHTML = '<span class="alert-icon">⚠</span><span>Atenção: voltagem acima de 80% do limite máximo. Monitore com cuidado durante o teste.</span>';
+  } else {
+    vEl.className = 'volt-display volt-ok';
+    fillEl.style.background = 'var(--green)';
+    alertEl.innerHTML = '';
+  }
+}
+
+function setDCEMode(m) {
+  dceMode = m;
+  document.getElementById('dce-pulsado').className  = 'mode-btn' + (m==='pulsado' ? ' active' : '');
+  document.getElementById('dce-continuo').className = 'mode-btn' + (m==='continuo' ? ' active' : '');
+
+  const cont = document.getElementById('regime-content');
+  document.getElementById('regime-title').textContent = m === 'pulsado'
+    ? 'Modo pulsado — o que o sistema vai fazer'
+    : 'Modo contínuo — o que o sistema vai fazer';
+
+  if (m === 'continuo') {
+    cont.innerHTML = `<div style="font-size:12px;color:var(--text2);line-height:1.6;">
+      O DCE vai aplicar uma força constante. O sistema vai aguardar o pêndulo atingir <strong>equilíbrio permanente</strong> e medir a deflexão estável (xss).<br><br>
+      O <strong>filtro Butterworth</strong> remove o transitório inicial. O critério de estado permanente é: variação &lt;0.1% por 10 amostras consecutivas.
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
+      <div class="metric"><div class="metric-label">Parâmetro medido</div><div style="font-family:var(--mono);font-size:14px;font-weight:500;margin-top:4px;">xss</div></div>
+      <div class="metric"><div class="metric-label">Precisão σ</div><div style="font-family:var(--mono);font-size:14px;font-weight:500;margin-top:4px;">&lt;0.01 µm</div></div>
+      <div class="metric"><div class="metric-label">Settling time</div><div style="font-family:var(--mono);font-size:14px;font-weight:500;margin-top:4px;">~100 s</div></div>
+      <div class="metric"><div class="metric-label">Filtro</div><div style="font-family:var(--mono);font-size:14px;font-weight:500;margin-top:4px;">Butterworth 5ª</div></div>
+    </div>`;
+  } else {
+    cont.innerHTML = `<div style="font-size:12px;color:var(--text2);line-height:1.6;">
+      O DCE vai aplicar um pulso de força. O pêndulo vai oscilar e o sistema vai registrar a <strong>maior deflexão (xmax)</strong> gerada.<br><br>
+      Isso representa o <strong>impulso total entregue ao pêndulo</strong>, usado para calcular Ft e Ibit.
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
+      <div class="metric"><div class="metric-label">Parâmetro medido</div><div style="font-family:var(--mono);font-size:14px;font-weight:500;margin-top:4px;">xmax</div></div>
+      <div class="metric"><div class="metric-label">Resolução</div><div style="font-family:var(--mono);font-size:14px;font-weight:500;margin-top:4px;">0.01 µm</div></div>
+      <div class="metric"><div class="metric-label">Repetições</div><div style="font-family:var(--mono);font-size:14px;font-weight:500;margin-top:4px;">N = 10</div></div>
+      <div class="metric"><div class="metric-label">Análise</div><div style="font-family:var(--mono);font-size:14px;font-weight:500;margin-top:4px;">FFT</div></div>
+    </div>`;
+  }
+}
+
+const STEPS = [
+  { label:'Executando calibração estática… aplicando massa padrão', dur:4000 },
+  { label:'Executando calibração dinâmica… registrando oscilação livre', dur:5000 },
+  { label:'Validando curvas do DCE… comparando com tabela de referência', dur:4000 },
+  { label:'Verificando incerteza final…', dur:2000 },
+];
+
+function runSequence() {
+  if (seqStep >= STEPS.length) { resetSequence(); return; }
+  document.getElementById('btn-seq').disabled = true;
+  document.getElementById('seq-progress').style.display = 'block';
+  document.getElementById('seq-done').style.display = 'none';
+  runStep(seqStep);
+}
+
+function runStep(i) {
+  if (i >= STEPS.length) {
+    document.getElementById('btn-seq').disabled = false;
+    document.getElementById('btn-seq').textContent = '✓ Calibração concluída';
+    document.getElementById('btn-seq').className = 'btn btn-success btn-lg';
+    document.getElementById('seq-done').style.display = 'flex';
+    document.getElementById('seq-label').textContent = 'Concluído com sucesso!';
+    return;
+  }
+  const s = STEPS[i];
+  document.getElementById('seq-label').textContent = s.label;
+  const sn = document.getElementById('sn'+(i+1));
+  const sb = document.getElementById('sb'+(i+1));
+  sn.className = 'step-num step-active';
+  sb.textContent = 'Em andamento…'; sb.className = 'step-status active';
+
+  let elapsed = 0;
+  seqTimer = setInterval(() => {
+    elapsed += 100;
+    const pct = (i / STEPS.length + (elapsed / s.dur) / STEPS.length) * 100;
+    document.getElementById('seq-fill').style.width = Math.min(pct,100).toFixed(1) + '%';
+    document.getElementById('seq-pct').textContent = Math.round(Math.min(pct,100)) + '%';
+    if (elapsed >= s.dur) {
+      clearInterval(seqTimer);
+      sn.className = 'step-num step-done'; sn.textContent = '✓';
+      sb.textContent = 'Concluído'; sb.className = 'step-status ok';
+      seqStep = i + 1;
+      setTimeout(() => runStep(seqStep), 400);
+    }
+  }, 100);
+}
+
+function resetSequence() {
+  clearInterval(seqTimer); seqStep = 0;
+  document.getElementById('btn-seq').textContent = '▶ Iniciar sequência de calibração';
+  document.getElementById('btn-seq').className = 'btn btn-primary btn-lg';
+  document.getElementById('btn-seq').disabled = false;
+  document.getElementById('seq-progress').style.display = 'none';
+  document.getElementById('seq-done').style.display = 'none';
+  [1,2,3,4].forEach(i => {
+    const sn = document.getElementById('sn'+i);
+    sn.className = 'step-num step-idle'; sn.textContent = i;
+    const sb = document.getElementById('sb'+i);
+    sb.textContent = 'Pendente'; sb.className = 'step-status idle';
+  });
+}
+
+recalc();
+window.addEventListener('resize', recalc);
+</script>
+</body>
+</html>

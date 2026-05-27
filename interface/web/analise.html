@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LaSE — Análise e Exportação</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-brand">
+    <div class="nav-brand-icon">B</div>
+    <div>
+      <div class="nav-brand-text">Balança de Microempuxo</div>
+      <div class="nav-brand-sub">LaSE · INPE</div>
+    </div>
+  </div>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">Dashboard</a>
+    <a href="calibracao.html" class="nav-link">Calibração</a>
+    <a href="analise.html" class="nav-link active">Análise e exportação</a>
+  </div>
+  <div class="nav-right">
+    <div class="status-chip"><span class="dot dot-green"></span>Calibração válida</div>
+  </div>
+</nav>
+
+<div class="flow-bar">
+  <a href="calibracao.html" class="flow-step done">
+    <div class="flow-step-num">✓</div> Calibração
+  </a>
+  <span class="flow-arrow">›</span>
+  <a href="index.html" class="flow-step done">
+    <div class="flow-step-num">✓</div> Aquisição de dados
+  </a>
+  <span class="flow-arrow">›</span>
+  <a href="analise.html" class="flow-step active">
+    <div class="flow-step-num">3</div> Análise e exportação
+  </a>
+</div>
+
+<div class="page">
+
+  <!-- Resultados em destaque -->
+  <div class="grid-4" style="margin-bottom:16px;">
+    <div class="metric ok">
+      <div class="metric-label">
+        Força de empuxo calculada
+        <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-text">Força média calculada a partir das medições de xmax e da sensibilidade calibrada da balança.</span></span>
+      </div>
+      <div class="metric-value" id="r-ft">0.847<span class="metric-unit">mN</span></div>
+      <div class="metric-desc">Média de 10 medições</div>
+    </div>
+    <div class="metric info">
+      <div class="metric-label">
+        Impulso específico (Ibit)
+        <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-text">Impulso total gerado por cada pulso do propulsor. Calculado a partir de Ft × duração do pulso.</span></span>
+      </div>
+      <div class="metric-value" id="r-ibit">8.47<span class="metric-unit">µN·s</span></div>
+      <div class="metric-desc">Por pulso</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">
+        Erro de calibração
+        <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-text">Diferença entre a força aplicada pelo DCE e a força calculada pela balança. Meta: menor que 1%.</span></span>
+      </div>
+      <div class="metric-value" id="r-err">—<span class="metric-unit">%</span></div>
+      <div class="metric-desc">Meta: &lt;1% (INMETRO)</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Repetibilidade</div>
+      <div class="metric-value" id="r-rep">—<span class="metric-unit">%</span></div>
+      <div class="metric-desc">Meta: &lt;0.05 Ns</div>
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-bottom:16px;">
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Curva de calibração — força aplicada × deslocamento medido</div>
+          <div class="card-subtitle">Quanto mais próxima de uma linha reta, melhor a calibração</div>
+        </div>
+        <div class="tag tag-ok" id="r2-tag">R² = —</div>
+      </div>
+      <div class="canvas-wrap" style="margin-bottom:8px;">
+        <canvas id="chart-calib" height="200"></canvas>
+      </div>
+      <div style="font-size:11px;color:var(--text3);">
+        Os pontos azuis são as medições. A linha verde é a regressão linear. R² deve ser maior que 0.99 para calibração válida.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Deflexão máxima (xmax) por pulso</div>
+          <div class="card-subtitle">Cada barra representa um pulso individual — barras amarelas estão fora da média</div>
+        </div>
+      </div>
+      <div class="canvas-wrap" style="margin-bottom:8px;">
+        <canvas id="chart-xmax" height="200"></canvas>
+      </div>
+      <div style="display:flex;gap:20px;font-size:11px;color:var(--text3);">
+        <span>Média: <strong id="xmax-mean" style="color:var(--text2);">—</strong> µm</span>
+        <span>Desvio padrão: <strong id="xmax-std" style="color:var(--text2);">—</strong> µm</span>
+        <span>Erro relativo: <strong id="xmax-err" style="color:var(--text2);">—</strong>%</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:2fr 1fr;gap:14px;">
+
+    <!-- Tabela -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Tabela de resultados — todas as medições</div>
+          <div class="card-subtitle">Linhas vermelhas indicam medições fora do critério de 1% de erro</div>
+        </div>
+        <button class="btn" style="font-size:12px;" onclick="genData()">↺ Regenerar dados simulados</button>
+      </div>
+      <div class="table-wrap">
+        <table id="results-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Tipo de teste</th>
+              <th>Força aplicada (µN)</th>
+              <th>Voltagem DCE (V)</th>
+              <th>xmax medido (µm)</th>
+              <th>Força calculada (mN)</th>
+              <th>Erro (%)</th>
+              <th>Resultado</th>
+            </tr>
+          </thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+      <div style="margin-top:12px;display:flex;align-items:center;gap:20px;font-size:12px;color:var(--text2);">
+        <span>Total: <strong id="total-rows" style="color:var(--text);">—</strong> medições</span>
+        <span style="color:var(--green);">Válidas: <strong id="valid-rows">—</strong></span>
+        <span style="color:var(--red);">Com erro: <strong id="invalid-rows">—</strong></span>
+      </div>
+    </div>
+
+    <!-- Painel direito -->
+    <div style="display:flex;flex-direction:column;gap:14px;">
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Resumo estatístico</div>
+            <div class="card-subtitle">Baseado em padrões INMETRO/EURAMET</div>
+          </div>
+        </div>
+        <table style="margin:0;">
+          <tr>
+            <td style="border:none;padding:7px 0;color:var(--text2);">Força média (Ft)</td>
+            <td class="mono" style="border:none;text-align:right;" id="stat-mean">—</td>
+          </tr>
+          <tr>
+            <td style="border:none;padding:7px 0;color:var(--text2);">Desvio padrão (σ)</td>
+            <td class="mono" style="border:none;text-align:right;" id="stat-std">—</td>
+          </tr>
+          <tr>
+            <td style="border:none;padding:7px 0;color:var(--text2);">Repetibilidade</td>
+            <td class="mono" style="border:none;text-align:right;" id="stat-rep">—</td>
+          </tr>
+          <tr>
+            <td style="border:none;padding:7px 0;color:var(--text2);">Erro máximo</td>
+            <td class="mono" style="border:none;text-align:right;" id="stat-max-err">—</td>
+          </tr>
+          <tr>
+            <td style="border:none;padding:7px 0;color:var(--text2);">Calibração &lt;1%</td>
+            <td class="mono" style="border:none;text-align:right;" id="stat-calib">—</td>
+          </tr>
+        </table>
+        <div id="stat-alert" style="margin-top:8px;"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Exportar resultados</div>
+            <div class="card-subtitle">Salve os dados da sessão</div>
+          </div>
+          <span class="tag tag-should">Should Have</span>
+        </div>
+
+        <div class="field">
+          <div class="field-label">Nome do arquivo</div>
+          <input type="text" id="filename" value="lase_calibracao_2026-03-31">
+        </div>
+
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:12px;">
+          <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;">Incluir no relatório:</div>
+          <div style="display:flex;flex-direction:column;gap:7px;">
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer;">
+              <input type="checkbox" checked> Gráficos (deslocamento, FFT, curva de calibração)
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer;">
+              <input type="checkbox" checked> Tabela de medições com erro por linha
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer;">
+              <input type="checkbox" checked> Parâmetros da balança (I, k, fnat, S)
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer;">
+              <input type="checkbox" checked> Data, hora e configuração da sessão
+            </label>
+          </div>
+        </div>
+
+        <div class="btn-row" style="margin-top:0;">
+          <button class="btn btn-primary" onclick="exportCSV()" style="flex:1;">↓ Baixar CSV</button>
+          <button class="btn" onclick="exportPDF()" style="flex:1;">↓ Baixar PDF</button>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:8px;text-align:center;">
+          CSV abre no Excel. PDF abre no Adobe Reader. Download em &lt;10 s.
+        </div>
+
+        <div id="export-alert" style="margin-top:8px;"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Recalibração necessária?</div>
+          </div>
+        </div>
+        <div class="alert alert-ok" style="margin-bottom:10px;">
+          <span class="alert-icon">✓</span>
+          <span>Calibração válida desde 31/03/2026 14:07. Nenhuma mudança de massa ou CG detectada.</span>
+        </div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.6;">
+          O sistema avisa automaticamente quando a configuração da balança mudar mais de 1% em relação à última calibração.
+        </div>
+        <button class="btn" style="width:100%;margin-top:10px;" onclick="window.location='calibracao.html'">Recalibrar a balança</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const C = { accent:'#2563eb', green:'#16a34a', amber:'#d97706', text3:'#9aa3b5', border:'#e2e6ef', bg3:'#f1f3f7' };
+let tableData = [];
+
+function genData() {
+  tableData = [];
+  [50,100,150,200,250,300,400,500,600,800].forEach((F, i) => {
+    const V    = Math.round(Math.sqrt(F / 0.45) * 10) / 10;
+    const xmax = +(F * 0.0124 + (Math.random()-.5)*0.02).toFixed(3);
+    const Ft   = +(xmax / 0.0124).toFixed(3);
+    const err  = +(Math.abs(Ft - F/1000*1000) / (F/1000*1000) * 100).toFixed(2);
+    tableData.push({ n:i+1, mode:'Pulsado', F, V, xmax, Ft, err, ok: err < 1.0 });
+  });
+  renderTable(); updateStats(); renderCharts();
+}
+
+function renderTable() {
+  document.getElementById('table-body').innerHTML = tableData.map(r => `
+    <tr>
+      <td class="mono">${r.n}</td>
+      <td style="color:var(--amber);font-weight:500;">${r.mode}</td>
+      <td class="mono">${r.F}</td>
+      <td class="mono">${r.V.toFixed(1)}</td>
+      <td class="mono">${r.xmax.toFixed(3)}</td>
+      <td class="mono">${r.Ft.toFixed(3)}</td>
+      <td class="${r.ok ? 'ok' : 'err'}">${r.err.toFixed(2)}</td>
+      <td>
+        <span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;
+          background:${r.ok ? 'var(--green-bg)' : 'var(--red-bg)'};
+          color:${r.ok ? 'var(--green)' : 'var(--red)'};
+          border:1px solid ${r.ok ? 'var(--green-bdr)' : 'var(--red-bdr)'};">
+          ${r.ok ? '✓ Válida' : '✗ Erro'}
+        </span>
+      </td>
+    </tr>
+  `).join('');
+  const valid = tableData.filter(r=>r.ok).length;
+  document.getElementById('total-rows').textContent   = tableData.length;
+  document.getElementById('valid-rows').textContent   = valid;
+  document.getElementById('invalid-rows').textContent = tableData.length - valid;
+}
+
+function updateStats() {
+  const fts  = tableData.map(r=>r.Ft);
+  const mean = fts.reduce((a,b)=>a+b,0)/fts.length;
+  const std  = Math.sqrt(fts.map(v=>(v-mean)**2).reduce((a,b)=>a+b,0)/fts.length);
+  const rep  = std/mean*100;
+  const maxErr = Math.max(...tableData.map(r=>r.err));
+  const calibOk = maxErr < 1.0;
+
+  document.getElementById('stat-mean').textContent    = mean.toFixed(3) + ' mN';
+  document.getElementById('stat-std').textContent     = std.toFixed(5) + ' mN';
+  document.getElementById('stat-rep').textContent     = rep.toFixed(3) + ' %';
+  document.getElementById('stat-max-err').textContent = maxErr.toFixed(2) + ' %';
+  document.getElementById('stat-calib').textContent   = calibOk ? '✓ Sim' : '✗ Não';
+  document.getElementById('stat-calib').className     = 'mono ' + (calibOk ? 'ok' : 'err');
+
+  const el = document.getElementById('stat-alert');
+  if (rep < 0.05) {
+    el.className = 'alert alert-ok';
+    el.innerHTML = '<span class="alert-icon">✓</span><span>Repetibilidade dentro do especificado (&lt;0.05 Ns). Medições confiáveis.</span>';
+  } else {
+    el.className = 'alert alert-warn';
+    el.innerHTML = '<span class="alert-icon">⚠</span><span>Repetibilidade acima do limite. Considere recalibrar a balança.</span>';
+  }
+
+  document.getElementById('r-ft').innerHTML   = mean.toFixed(3) + '<span class="metric-unit">mN</span>';
+  document.getElementById('r-ibit').innerHTML = (mean*10).toFixed(2) + '<span class="metric-unit">µN·s</span>';
+  document.getElementById('r-err').innerHTML  = maxErr.toFixed(2) + '<span class="metric-unit">%</span>';
+  document.getElementById('r-rep').innerHTML  = rep.toFixed(3) + '<span class="metric-unit">%</span>';
+
+  const cardErr = document.querySelector('[id="r-err"]').closest('.metric');
+  cardErr.className = maxErr < 1 ? 'metric ok' : 'metric danger';
+
+  const xVals = tableData.map(r=>r.xmax);
+  const xMean = xVals.reduce((a,b)=>a+b,0)/xVals.length;
+  const xStd  = Math.sqrt(xVals.map(v=>(v-xMean)**2).reduce((a,b)=>a+b,0)/xVals.length);
+  document.getElementById('xmax-mean').textContent = xMean.toFixed(3);
+  document.getElementById('xmax-std').textContent  = xStd.toFixed(4);
+  document.getElementById('xmax-err').textContent  = (xStd/xMean*100).toFixed(2);
+}
+
+function renderCharts() {
+  const xs = tableData.map(r=>r.F);
+  const ys = tableData.map(r=>r.xmax);
+  const n=xs.length, sumX=xs.reduce((a,b)=>a+b,0), sumY=ys.reduce((a,b)=>a+b,0);
+  const sumXY=xs.map((x,i)=>x*ys[i]).reduce((a,b)=>a+b,0), sumX2=xs.map(x=>x*x).reduce((a,b)=>a+b,0);
+  const sl=(n*sumXY-sumX*sumY)/(n*sumX2-sumX*sumX), ic=(sumY-sl*sumX)/n;
+  const yMean=sumY/n;
+  const ssRes=ys.map((y,i)=>(y-(sl*xs[i]+ic))**2).reduce((a,b)=>a+b,0);
+  const ssTot=ys.map(y=>(y-yMean)**2).reduce((a,b)=>a+b,0);
+  const r2=+(1-ssRes/ssTot).toFixed(4);
+  document.getElementById('r2-tag').textContent = 'R² = ' + r2;
+  document.getElementById('r2-tag').className = r2 >= 0.99 ? 'tag tag-ok' : 'tag tag-must';
+
+  const baseOpts = (xLabel, yLabel) => ({
+    animation: false, responsive: true, maintainAspectRatio: true,
+    plugins: {
+      legend: { labels: { color: C.text3, font: { size:11, family:"'JetBrains Mono'" } } },
+      tooltip: { backgroundColor:'#1a2035', borderColor:C.border, borderWidth:1, titleColor:C.text3, bodyColor:'#e2e6ef' }
+    },
+    scales: {
+      x: { type:'linear', title:{ display:true, text:xLabel, color:C.text3, font:{size:11} }, ticks:{ color:C.text3, font:{size:10,family:"'JetBrains Mono'"} }, grid:{ color:C.border } },
+      y: { title:{ display:true, text:yLabel, color:C.text3, font:{size:11} }, ticks:{ color:C.text3, font:{size:10,family:"'JetBrains Mono'"} }, grid:{ color:C.border } }
+    }
+  });
+
+  if (window._cC) window._cC.destroy();
+  window._cC = new Chart(document.getElementById('chart-calib').getContext('2d'), {
+    data: {
+      datasets: [
+        { type:'scatter', label:'Medições', data:xs.map((x,i)=>({x,y:ys[i]})), backgroundColor:C.accent, pointRadius:5, pointHoverRadius:7 },
+        { type:'line', label:'Regressão linear', data:[{x:Math.min(...xs),y:sl*Math.min(...xs)+ic},{x:Math.max(...xs),y:sl*Math.max(...xs)+ic}], borderColor:C.green, borderWidth:2, pointRadius:0 }
+      ]
+    },
+    options: baseOpts('Força aplicada (µN)', 'xmax medido (µm)')
+  });
+
+  if (window._xC) window._xC.destroy();
+  const vals = tableData.map(r=>r.xmax);
+  const avg  = vals.reduce((a,b)=>a+b,0)/vals.length;
+  window._xC = new Chart(document.getElementById('chart-xmax').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: tableData.map(r=>'P'+r.n),
+      datasets: [{
+        label: 'xmax (µm)',
+        data: vals,
+        backgroundColor: vals.map(v => Math.abs(v-avg)/avg > 0.02 ? 'rgba(217,119,6,.6)' : 'rgba(37,99,235,.6)'),
+        borderColor:     vals.map(v => Math.abs(v-avg)/avg > 0.02 ? C.amber : C.accent),
+        borderWidth: 1
+      }]
+    },
+    options: { ...baseOpts('Pulso', 'xmax (µm)'), plugins: { ...baseOpts().plugins, legend:{ display:false } } }
+  });
+}
+
+function exportCSV() {
+  const fname = document.getElementById('filename').value + '.csv';
+  const hdr = ['#','Modo','Força_uN','Voltagem_V','xmax_um','Ft_mN','Erro_%','Resultado'];
+  const rows = tableData.map(r => [r.n,r.mode,r.F,r.V.toFixed(1),r.xmax.toFixed(3),r.Ft.toFixed(3),r.err.toFixed(2),r.ok?'Válida':'Erro']);
+  const csv = [hdr,...rows].map(r=>r.join(',')).join('\n');
+  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'})), download: fname });
+  a.click();
+  showAlert('export-alert', 'ok', '✓ Arquivo salvo: ' + fname + '. Abra no Excel para visualizar.');
+}
+
+function exportPDF() {
+  showAlert('export-alert', 'info', 'ℹ Para o PDF: conecte o backend FastAPI com ReportLab. Endpoint: POST /api/export/pdf');
+}
+
+function showAlert(id, type, msg) {
+  const el = document.getElementById(id);
+  el.className = 'alert alert-' + type;
+  el.innerHTML = '<span class="alert-icon">' + (type==='ok'?'✓':'ℹ') + '</span><span>' + msg + '</span>';
+  setTimeout(() => { el.innerHTML = ''; }, 6000);
+}
+
+genData();
+</script>
+</body>
+</html>
