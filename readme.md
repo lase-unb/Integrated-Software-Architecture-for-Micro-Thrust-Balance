@@ -1,6 +1,6 @@
 # Integrated Software Architecture for Micro-Thrust Balance
 
-> Pipeline digital de quatro camadas para automação metrológica e tratamento de ruídos em bancadas de microempuxo — LaSE/UnB × AEB
+> Pipeline digital de quatro camadas para automação metrológica e tratamento de ruídos em bancadas de microempuxo 
 
 [![Python](https://img.shields.io/badge/Python-3.9+-blue)](https://python.org)
 [![Streamlit](https://img.shields.io/badge/Interface-Streamlit-red)](https://streamlit.io)
