@@ -4,20 +4,20 @@ g = 9.784; % Gravidade local. Coordenadas: (-15.999557, -48.046830).
 m_p = 0.75935;  % [kg] (massa do propulsor + base ( kg)) PESAR NO LAB
 y_p = -(0.368);  % [m] dist. do pivô até o ponto de aplicação de força (distância do propulsor até o pivô. Manter negativo, pois a coordenada está localizada abaixo do pivô.)
 
-m_c = 0;   % [kg] (massa do contra-peso)
-%y_c = 0;   % [m] (distância do contra-peso até o pivô)
+m_c = 1.434;   % [kg] (massa do contra-peso)
+%y_c = ;   % [m] (distância do contra-peso até o pivô)
 
 %m_b = 0.16133*2; % [kg] (massa do braço. Como é simétrico, considerou-se como apenas um braço) PESAR NO LAB
 
 % ---- Chamada das funções
 %cg_y = calcular_cg_1d(m_p, y_p, m_c, y_c, m_b);
-cg_y = ; % valor retirado do software SOLIDWORKS. Verficar o arquivo "0.Thrust_Balance_cg_y.x_t"
+cg_y = -0.08859; % valor retirado do software SOLIDWORKS. Verficar o arquivo "0.Thrust_Balance_cg_y.x_t"
 S = calcular_sensibilidade(y_p, m_p, m_c, g, cg_y);
 
 % ---- Exibição dos resultados
 % Definição do diretório e arquivo
-pasta_saida = 'C:\Users\thami\OneDrive - unb.br\FGA\Balança de Microempuxo - LaSE\Integrated-Software-Architecture-for-Micro-Thrust-Balance\Análises\resultados\carga_constante\sensibilidade intermediaria';
-nome_arquivo = 'resultados_intermediaria_sensibilidade_1.txt';
+pasta_saida = 'C:\Users\thami\OneDrive - unb.br\FGA\Balança de Microempuxo - LaSE\Integrated-Software-Architecture-for-Micro-Thrust-Balance\Análises\resultados\carga_constante\27_maio\S-2';
+nome_arquivo = 'resultados_cg_sensibilidade.txt';
 caminho_completo = fullfile(pasta_saida, nome_arquivo);
 
 % Garante que a pasta exista

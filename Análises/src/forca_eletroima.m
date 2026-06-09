@@ -8,6 +8,9 @@ d = [7.71; 10.77; 14.19; 17.18; 20.02; 21.85]; % Distância (mm)
 % Massa real medida pela balança em kg 
 massa_kg = [0.0067; 0.0031; 0.0015; 0.0007; 0.0004; 0.0003]; 
 
+% desvio padrão das medições
+% desvio_padrao = [];
+
 % Define a gravidade local (Brasília - DF) e sua incerteza (estimada)
 g_local = 9.78; % m/s^2 
 erro_g = 0.02;  % m/s^2 
@@ -93,6 +96,6 @@ filename = 'forca-vs-deslocamento-eletroima-LaSE.png';
 % Create the full path
 fullPath = fullfile(folder, filename);
 % Save the current figure (gcf) to that path
-exportgraphics(gcf, fullPath, 'Resolution', 300); 
+%exportgraphics(gcf, fullPath, 'Resolution', 300); 
 % Imprime mensagem de confirmação de salvamento
 fprintf('Gráfico salvo com sucesso em:\n%s\n', fullPath);

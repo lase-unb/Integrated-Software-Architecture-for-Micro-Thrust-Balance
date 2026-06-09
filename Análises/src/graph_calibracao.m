@@ -1,190 +1,163 @@
-clear all; clc; close all;
+clear all; clc;
 
-%% ESTE SCRIPT BUSCA PLOTAR AS CURVAS DE CALIBRAÇÃO INDIVIDUALMENTE E TAMBÉM UM GRAFICO UNIFICANDO TODAS AS CURVAS
+% ==============================================================================
+% 1. KNOWN INPUT DATA
+% ==============================================================================
+% Dados de sensibilidade obtidos no script CG_sensibilidade.m
+S = 0.0582; % [m/N]
+S_menor = 0.0179; % [m/N]
+S_maior = 0.0939; % [m/N]
+S_S2 = 0.0697;
+S_1_junho = 0.0712;
 
-% === PARÂMETROS DA BALANÇA ===
-% Sensibilidades [m/N]
-S_todos = [0.0582, 0.0179, 0.0939];
-titulos_janela = {'S = 0.0582 (Intermediária)', 'S = 0.0179 (Menor)', 'S = 0.0939 (Maior)'};
+% Vetor da primeira coluna (Deslocamento/Deflexão)
+d = [1.8039, 3.9369, 5.8372, 9.7834];
+d_menor = [1.4982, 4.3618];
+d_maior = [3.3523, 6.7382, 9.5474, 14.2316];
+d_S2 = [1.843000, 2.953000, 3.832000, 8.125000, 12.431000, 16.988000, 11.738000, 16.135000, 21.305000, 17.254000, 23.252000, 30.319000, 25.455000, 35.177000, 46.763500, 31.620000, 39.336500];
+d_1_junho = [2.403500, 3.558790, 8.633470, 13.283070, 17.047410, 11.899050, 11.899050, 17.967160, 23.099000, 17.077400, 25.282920, 43.202470, 19.815610, 30.164730, 39.264370, 26.991540, 63.414910];
+d_todos = {d, d_menor, d_maior, d_S2, d_1_junho};
 
-% === CAMINHOS DE DIRETÓRIOS ===
+% Vetor da segunda coluna (Força)
+f = [167.1960, 324.3694, 486.3337, 808.3664];
+f_menor = [167.1960, 618.1822];
+f_maior = [167.1960, 418.8246, 618.1822, 918.3950];
+f_S2 = [38.7153, 73.7835, 108.8517, 166.9689, 318.2088, 469.4487, 219.4649, 418.2556, 617.0463, 323.9287, 617.3423, 910.7560, 481.2407, 917.1472, 1353.0536, 634.0472, 807.2681];
+f_1_junho = [38.7153, 73.7835, 108.8517, 166.9689, 318.2088, 469.4487, 219.4649, 418.2556, 617.0463, 323.9287, 617.3423, 910.7560, 481.2407, 917.1472, 1353.0536, 634.0472, 807.2681];
+f_todos = {f, f_menor, f_maior, f_S2, f_1_junho};
+
+S_todos = [S, S_menor, S_maior, S_S2];
+titulos_janela = {'S = 0.0582', 'S = 0.0179', 'S = 0.0939', 'S = 0.0697', 'S = 1 junho'};
+
 caminhos_salvamento = {
     'C:\Users\thami\OneDrive - unb.br\FGA\Balança de Microempuxo - LaSE\Integrated-Software-Architecture-for-Micro-Thrust-Balance\Análises\resultados\carga_constante\sensibilidade intermediaria', ...
     'C:\Users\thami\OneDrive - unb.br\FGA\Balança de Microempuxo - LaSE\Integrated-Software-Architecture-for-Micro-Thrust-Balance\Análises\resultados\carga_constante\menor sensibilidade', ...
-    'C:\Users\thami\OneDrive - unb.br\FGA\Balança de Microempuxo - LaSE\Integrated-Software-Architecture-for-Micro-Thrust-Balance\Análises\resultados\carga_constante\maior sensibilidade'
-    };
+    'C:\Users\thami\OneDrive - unb.br\FGA\Balança de Microempuxo - LaSE\Integrated-Software-Architecture-for-Micro-Thrust-Balance\Análises\resultados\carga_constante\maior sensibilidade', ...
+    'C:\Users\thami\OneDrive - unb.br\FGA\Balança de Microempuxo - LaSE\Integrated-Software-Architecture-for-Micro-Thrust-Balance\Análises\resultados\carga_constante\27_maio\S-2', ...
+    'C:\Users\thami\OneDrive - unb.br\FGA\Balança de Microempuxo - LaSE\Integrated-Software-Architecture-for-Micro-Thrust-Balance\Análises\resultados\carga_constante\1_junho'
+};
 
-% Caminhos dos arquivos de dados crus (.txt)
-caminhos_txt = {
-    'C:\Users\thami\OneDrive - unb.br\FGA\Balança de Microempuxo - LaSE\Integrated-Software-Architecture-for-Micro-Thrust-Balance\Análises\resultados\carga_constante\sensibilidade intermediaria\resultados_curvaCalibracao_sensIntermed.txt', ... % Mude aqui quando tiver a intermediária
-    'C:\Users\thami\OneDrive - unb.br\FGA\Balança de Microempuxo - LaSE\Integrated-Software-Architecture-for-Micro-Thrust-Balance\Análises\resultados\carga_constante\menor sensibilidade\resultados_curvaCalibracao_menorSensibilidade.txt', ...
-    'C:\Users\thami\OneDrive - unb.br\FGA\Balança de Microempuxo - LaSE\Integrated-Software-Architecture-for-Micro-Thrust-Balance\Análises\resultados\carga_constante\maior sensibilidade\resultados_curvaCalibracao_maiorSensibilidade.txt'
-    };
+% ==============================================================================
+% DEFINIÇÃO DO REGIME DE EXTRAPOLAÇÃO: 10 µN até 100.000 µN (100 mN)
+% ==============================================================================
+F_extrapolada = linspace(10, 100000, 1000); 
 
-% Limites de Força definidos para os gráficos
-F_min_plot = 0;   % [uN]
-F_max_plot = 1000; % [uN]
-
-% === 1. LEITURA E PREPARAÇÃO DOS DADOS CRUS ===
-d_crus_todos = cell(1, 3);
-f_crus_todos = cell(1, 3);
-
-fprintf('--- Importando Dados Crus ---\n');
-for i = 1:3
-    caminho_arquivo = caminhos_txt{i};
-    if ~isempty(caminho_arquivo) && exist(caminho_arquivo, 'file')
-        % Lê a tabela do arquivo
-        tabela_cru = readtable(caminho_arquivo, 'Delimiter', '\t');
-
-        % Extrai colunas
-        f_temp = tabela_cru.Forca_Equivalente_uN;
-        d_temp = tabela_cru.Deslocamento_script_um;
-
-        % Conversão segura (Texto com vírgula -> Número com ponto)
-        if iscell(f_temp) || isstring(f_temp) || ischar(f_temp)
-            f_num = str2double(strrep(string(f_temp), ',', '.'));
-        else
-            f_num = double(f_temp);
-        end
-
-        if iscell(d_temp) || isstring(d_temp) || ischar(d_temp)
-            d_num = str2double(strrep(string(d_temp), ',', '.'));
-        else
-            d_num = double(d_temp);
-        end
-
-        % Remove possíveis NaNs (linhas em branco no fim do txt)
-        idx_validos = ~isnan(d_num) & ~isnan(f_num);
-        d_num = d_num(idx_validos);
-        f_num = f_num(idx_validos);
-
-        % Salva na matriz de células
-        d_crus_todos{i} = d_num;
-        f_crus_todos{i} = f_num;
-
-        fprintf('S = %.4f: %d amostras carregadas com sucesso.\n', S_todos(i), length(d_num));
-    else
-        fprintf('S = %.4f: Arquivo TXT não encontrado. Ignorando esta sensibilidade.\n', S_todos(i));
-    end
-end
-fprintf('\n');
-
-% === 2. GERAÇÃO DOS GRÁFICOS INDIVIDUAIS ===
-% Variáveis para armazenar os dados dos modelos e gerar o comparativo
-coef_a_salvos = zeros(1,3);
-coef_b_salvos = zeros(1,3);
-R2_salvos = zeros(1,3);
-dados_existem = false(1,3);
-
-for i = 1:3
-    % Se a célula estiver vazia (sem dados), pula para a próxima iteração
-    if isempty(d_crus_todos{i})
-        continue;
-    end
-
-    dados_existem(i) = true;
-    d_calculo = d_crus_todos{i};
-    f_calculo = f_crus_todos{i};
+% --- Loop 1: Gerar, plotar e salvar os gráficos individuais ---
+for i = 1:4
+    d_atual = d_todos{i};
+    f_atual = f_todos{i};
     S_atual = S_todos(i);
-    caminho_salvar = caminhos_salvamento{i};
-
-    % Criação do Modelo Linear com base 100% nos dados crus
-    mdl = fitlm(d_calculo, f_calculo);
-    R2_val = mdl.Rsquared.Ordinary;
-
-    % Coeficientes: F = a*d + b
-    b_coef = mdl.Coefficients.Estimate(1);
-    a_coef = mdl.Coefficients.Estimate(2);
-
-    % Salva as informações necessárias para plotar o gráfico comparativo depois
-    coef_a_salvos(i) = a_coef;
-    coef_b_salvos(i) = b_coef;
-    R2_salvos(i) = R2_val;
-
-    % Extrapolação da linha de tendência forçada entre 10 uN e 1000 uN
-    d_min_limite = (F_min_plot - b_coef) / a_coef;
-    d_max_limite = (F_max_plot - b_coef) / a_coef;
-    d_plot = linspace(d_min_limite, d_max_limite, 100)';
-
-    % Calcula a linha predita e os intervalos de confiança (95%)
-    [f_plot, f_ci] = predict(mdl, d_plot, 'Prediction', 'curve');
-
+    caminho_atual = caminhos_salvamento{i};
+    
+    % Ajuste linear FORÇANDO A ORIGEM (F = a*d -> b=0)
+    a = d_atual(:) \ f_atual(:);
+    b = 0;
+    
+    % --- CÁLCULO DA MATRIZ DE COVARIÂNCIA E INCERTEZA ---
+    N = length(d_atual);
+    f_ajuste = a * d_atual + b;
+    
+    if N > 2
+        s2 = sum((f_atual - f_ajuste).^2) / (N - 2); 
+    else
+        s2 = 1e-10; % Variância teórica mínima
+    end
+    
+    X_mat = [d_atual(:), ones(N, 1)];
+    C = s2 * inv(X_mat' * X_mat);
+    var_a = C(1,1);
+    var_b = C(2,2);
+    cov_ab = C(1,2);
+    % -----------------------------------------------------
+    
+    % Deslocamento Extrapolado (Baseado no vetor F_extrapolada de 10 a 100k)
+    d_plot = F_extrapolada / a; 
+    
+    % Propagação da Incerteza 
+    z = 2; % Fator de cobertura (95% de confiança)
+    sigma_f = sqrt((d_plot.^2) * var_a + var_b + 2 * d_plot * cov_ab);
+    
+    f_sup = F_extrapolada + z * sigma_f;
+    f_inf = F_extrapolada - z * sigma_f;
+    
     fig = figure('Name', sprintf('Gráfico de Calibração - %s', titulos_janela{i}), ...
-        'Color', 'w', 'Position', [100 + (i*50), 100 + (i*50), 900, 500]);
+                 'Color', 'w', 'Position', [100 + (i*50), 100 + (i*50), 900, 500]);
+       
     hold on;
-
-    % 1. Região Sombreada (Banda de Confiança)
-    X_patch = [d_plot', fliplr(d_plot')];
-    Y_patch = [f_ci(:,2)', fliplr(f_ci(:,1)')];
-    fill(X_patch, Y_patch, [0.9 0.8 1], 'FaceAlpha', 0.6, 'EdgeColor', [0.8 0 0.8], 'LineWidth', 1);
-
-    % 2. Linha de Tendência Ideal
-    plot(d_plot, f_plot, 'k--', 'LineWidth', 1.5);
-
-    % 3. Dispersão dos Dados Crus
-    scatter(d_calculo, f_calculo, 40, 'MarkerEdgeColor', 'k', 'MarkerFaceColor', [0.4 0.4 0.4]);
-
-    legend({sprintf('Região de Confiança 95%% (R^2 = %.4f)', R2_val), 'Linha de Tendência Ideal', 'Amostras'}, 'Location', 'best');
+    
+    % 1. Plota a região de confiança sombreada 
+    fill([d_plot, fliplr(d_plot)], [f_sup, fliplr(f_inf)], 'r', ...
+        'FaceAlpha', 0.15, 'EdgeColor', 'none', 'HandleVisibility', 'on');
+    
+    % 2. Plota a linha de tendência extrapolada
+    plot(d_plot, F_extrapolada, 'r--', 'LineWidth', 1.5); 
+    
+    % 3. Plota os dados experimentais 
+    plot(d_atual, f_atual, 'bo', 'MarkerSize', 6, 'MarkerFaceColor', 'b'); 
+    
+    legend('Região de Confiança (95%)', 'Linha de Tendência', 'Dados Experimentais', 'Location', 'northwest');
     title(sprintf('Curva de Calibração para S = %.4f m/N', S_atual));
     xlabel('Deslocamento (\mum)');
     ylabel('Força F_{eq} (\muN)');
-
-    % Trava o eixo Y para exibir estritamente de 10 a 1000
-    ylim([F_min_plot, F_max_plot]);
+    
+    % Impondo limites (10 a 100.000 µN)
+    ylim([10 100000]);
+    xlim([min(d_plot) max(d_plot)]);
+    
     grid on;
     hold off;
-
-    % Salvar gráfico
-    if ~exist(caminho_salvar, 'dir')
-        mkdir(caminho_salvar);
+    
+    % Salvar
+    if ~exist(caminho_atual, 'dir')
+        mkdir(caminho_atual);
     end
     nome_arquivo = sprintf('curva_calibracao_S_%.4f.png', S_atual);
-    caminho_completo = fullfile(caminho_salvar, nome_arquivo);
+    caminho_completo = fullfile(caminho_atual, nome_arquivo);
     saveas(fig, caminho_completo);
-    fprintf('Gráfico salvo: %s (R^2 = %.4f)\n', nome_arquivo, R2_val);
+    fprintf('Gráfico individual salvo em: %s\n', caminho_completo);
 end
 
-% === 3. GERAÇÃO DO GRÁFICO COMPARATIVO ===
-% Só gera o comparativo se houver pelo menos um conjunto de dados lido
-if any(dados_existem)
-    fig_comp = figure('Name', 'Comparativo de Sensibilidades', 'Color', 'w', 'Position', [300, 200, 900, 500]);
-    hold on;
-    estilos_linha = {'-k', ':k', '-.k'};
-    legendas_comp = {};
+% --- Nova Figura: Comparativo das Curvas de Tendência ---
+fig_comp = figure('Name', 'Comparativo de Sensibilidades', 'Color', 'w', 'Position', [300, 200, 900, 500]);
+hold on;
 
-    fprintf('\n--- Equações das Retas de Tendência (Feq = a * d + b) ---\n');
-    for i = 1:3
-        % Só plota no comparativo as curvas que de fato tiveram dados crus carregados
-        if dados_existem(i)
-            a_coef = coef_a_salvos(i);
-            b_coef = coef_b_salvos(i);
-            S_atual = S_todos(i);
+estilos_linha = {'-k', '--k', ':k', '-.k'}; % 4 estilos agora para incluir S2
+legendas_comp = cell(1, 4);
 
-            % Força os limites de X baseados nos limites de Y
-            d_min_limite = (F_min_plot - b_coef) / a_coef;
-            d_max_limite = (F_max_plot - b_coef) / a_coef;
-
-            d_plot = [d_min_limite, d_max_limite];
-            f_plot = a_coef * d_plot + b_coef;
-
-            plot(d_plot, f_plot, estilos_linha{i}, 'LineWidth', 1.5);
-
-            legendas_comp{end+1} = sprintf('S = %.4f m/N', S_atual);
-            fprintf('S = %.4f m/N -> Feq = %.4f * d %+.4f (R^2 = %.4f)\n', S_atual, a_coef, b_coef, R2_salvos(i));
-        end
-    end
-
-    legend(legendas_comp, 'Location', 'northwest');
-    title('Comparativo das Curvas de Calibração (10 \muN a 1000 \muN)');
-    xlabel('Deslocamento (\mum)');
-    ylabel('Força F_{eq} (\muN)');
-
-    % Trava o eixo Y do comparativo também
-    ylim([F_min_plot, F_max_plot]);
-    grid on;
-    hold off;
-
-    fprintf('\nRotina finalizada com sucesso.\n');
-else
-    fprintf('\nNenhum dado cru foi encontrado. O gráfico comparativo não pôde ser gerado.\n');
+fprintf('\n--- Equações das Retas de Tendência (Feq = a * d) ---\n');
+% Loop alterado para 4, incluindo S2
+for i = 1:4 
+    d_atual = d_todos{i};
+    f_atual = f_todos{i};
+    S_atual = S_todos(i);
+    
+    % Ajuste linear forçando origem
+    a = d_atual(:) \ f_atual(:);
+    
+    % Extrapolação baseada na força (10 a 100.000 µN)
+    d_plot = F_extrapolada / a;
+    
+    % Plota a linha extrapolada
+    plot(d_plot, F_extrapolada, estilos_linha{i}, 'LineWidth', 1.5);
+    
+    % Legenda e Impressão
+    legendas_comp{i} = sprintf('S = %.4f m/N', S_atual);
+    fprintf('S = %.4f m/N -> Feq = %.4f * d\n', S_atual, a);
 end
+
+legend(legendas_comp, 'Location', 'northwest');
+title('Comparativo das Curvas de Calibração para Diferentes Configurações de Sensibilidade');
+xlabel('Deslocamento (\mum)');
+ylabel('Força F_{eq} (\muN)');
+
+% Impondo limites no gráfico comparativo
+ylim([10 100000]);
+
+% Para o limite de deslocamento no gráfico comparativo, pegamos a reta mais "deitada" (menor S)
+a_menor_S = d_menor(:) \ f_menor(:);
+xlim([0 max(F_extrapolada / a_menor_S)]);
+
+grid on;
+hold off;
+
+fprintf('\nRotina finalizada com sucesso.\n');

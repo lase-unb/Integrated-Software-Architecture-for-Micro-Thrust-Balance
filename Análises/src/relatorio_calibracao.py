@@ -65,9 +65,9 @@ def plotar_curva_calibracao(Feq, deslocamento, desvio_padrao, save_path):
 # ==============================================================================
 # CONFIGURAÇÃO DE DIRETÓRIOS E ARQUIVOS
 # ==============================================================================
-input_dir = r"C:\Users\thami\OneDrive - unb.br\FGA\Balança de Microempuxo - LaSE\Integrated-Software-Architecture-for-Micro-Thrust-Balance\Análises\data\carga_constante\menor sensibilidade"
-output_dir = r"C:\Users\thami\OneDrive - unb.br\FGA\Balança de Microempuxo - LaSE\Integrated-Software-Architecture-for-Micro-Thrust-Balance\Análises\resultados\carga_constante\menor sensibilidade"
-output_filename = "resultados_curvaCalibracao_menorSensibilidade.txt"
+input_dir = r"C:\Users\thami\OneDrive - unb.br\FGA\Balança de Microempuxo - LaSE\Integrated-Software-Architecture-for-Micro-Thrust-Balance\Análises\data\carga_constante\1-junho"
+output_dir = r"C:\Users\thami\OneDrive - unb.br\FGA\Balança de Microempuxo - LaSE\Integrated-Software-Architecture-for-Micro-Thrust-Balance\Análises\resultados\carga_constante\1-junho"
+output_filename = "resultados_curvaCalibracao.txt"
 
 # Cria a pasta de resultados caso ela não exista
 os.makedirs(output_dir, exist_ok=True)
@@ -80,6 +80,7 @@ g_local = 9.784 # Aceleração da gravidade local (m/s^2)
 L = 0.3675      # Distância L em metros (367.5 mm)
 
 massas_conhecidas = {
+    'P0': 0.0002638, # kg
     'P1': 0.0011377, # kg
     'P2': 0.0014954, # kg
     'P3': 0.0022072, # kg
