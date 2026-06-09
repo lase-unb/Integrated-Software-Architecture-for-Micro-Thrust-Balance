@@ -1,0 +1,52 @@
+# ── Dados experimentais ───────────────────────────────────────
+data.txt
+data/*.txt
+Análises/data/**/*.txt
+resultado_*.png
+Análises/resultados/**/*.png
+
+# ── Python ────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+.eggs/
+
+# ── Ambientes virtuais ────────────────────────────────────────
+.env
+.venv
+env/
+venv/
+ENV/
+
+# ── Jupyter ───────────────────────────────────────────────────
+.ipynb_checkpoints
+*.ipynb
+
+# ── IDEs ──────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ── MATLAB ────────────────────────────────────────────────────
+*.asv
+*.m~
+slprj/
+
+# ── Relatórios gerados automaticamente ───────────────────────
+interface/reports/
+*.pdf
+!docs/*.pdf
+
+# ── Logs ──────────────────────────────────────────────────────
+*.log
+logs/

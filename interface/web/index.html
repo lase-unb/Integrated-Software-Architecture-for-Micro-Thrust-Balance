@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LaSE — Balança de Microempuxo</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-brand">
+    <div class="nav-brand-icon">B</div>
+    <div>
+      <div class="nav-brand-text">Balança de Microempuxo</div>
+      <div class="nav-brand-sub">LaSE · INPE</div>
+    </div>
+  </div>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link active">Dashboard</a>
+    <a href="calibracao.html" class="nav-link">Calibração</a>
+    <a href="analise.html" class="nav-link">Análise e exportação</a>
+  </div>
+  <div class="nav-right">
+    <div class="status-chip"><span class="dot dot-green dot-pulse"></span>Sensor LVDT conectado</div>
+    <div class="status-chip" id="clock" style="font-family:var(--mono);font-size:12px;">--:--:--</div>
+  </div>
+</nav>
+
+<!-- Barra de fluxo guiado -->
+<div class="flow-bar">
+  <a href="calibracao.html" class="flow-step done">
+    <div class="flow-step-num">✓</div>
+    Calibração
+  </a>
+  <span class="flow-arrow">›</span>
+  <a href="index.html" class="flow-step active">
+    <div class="flow-step-num">2</div>
+    Aquisição de dados
+  </a>
+  <span class="flow-arrow">›</span>
+  <a href="analise.html" class="flow-step">
+    <div class="flow-step-num">3</div>
+    Análise e exportação
+  </a>
+</div>
+
+<div class="page">
+
+  <!-- Métricas principais com contexto -->
+  <div class="grid-4" style="margin-bottom:16px;">
+    <div class="metric info" id="card-desl">
+      <div class="metric-label">
+        Deslocamento atual
+        <span class="tooltip-wrap">
+          <span class="tooltip-icon">?</span>
+          <span class="tooltip-text">Posição atual do pêndulo em relação à posição de repouso, medida pelo sensor LVDT.</span>
+        </span>
+      </div>
+      <div class="metric-value" id="m-desl">0.000<span class="metric-unit">µm</span></div>
+      <div class="metric-desc">Posição do pêndulo — sensor LVDT</div>
+    </div>
+    <div class="metric" id="card-fn">
+      <div class="metric-label">
+        Frequência natural
+        <span class="tooltip-wrap">
+          <span class="tooltip-icon">?</span>
+          <span class="tooltip-text">Frequência de oscilação natural do pêndulo (fnat). Calculada via FFT. Deve estar entre 0.5 e 5 Hz para boa sensibilidade.</span>
+        </span>
+      </div>
+      <div class="metric-value" id="m-fn">—<span class="metric-unit">Hz</span></div>
+      <div class="metric-desc" id="fn-desc">Aguardando dados suficientes…</div>
+    </div>
+    <div class="metric" id="card-amp">
+      <div class="metric-label">
+        Amplitude de pico (xmax)
+        <span class="tooltip-wrap">
+          <span class="tooltip-icon">?</span>
+          <span class="tooltip-text">Maior deslocamento registrado. No modo pulsado, este valor é usado para calcular a força de empuxo (Ft).</span>
+        </span>
+      </div>
+      <div class="metric-value" id="m-amp">—<span class="metric-unit">µm</span></div>
+      <div class="metric-desc">Máximo deslocamento registrado</div>
+    </div>
+    <div class="metric" id="card-mode">
+      <div class="metric-label">Modo de operação</div>
+      <div class="metric-value" id="m-mode" style="font-size:18px;">Pulsado</div>
+      <div class="metric-desc" id="mode-desc-top">Captura xmax — transitório</div>
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-bottom:16px;">
+    <!-- Gráfico de deslocamento -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Deslocamento do pêndulo ao longo do tempo</div>
+          <div class="card-subtitle">Atualização em tempo real · 100 amostras/segundo</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span id="acq-badge" style="display:none;font-size:11px;background:var(--green-bg);color:var(--green);border:1px solid var(--green-bdr);padding:3px 10px;border-radius:20px;font-weight:500;">● Gravando</span>
+        </div>
+      </div>
+      <div class="canvas-wrap" style="margin-bottom:8px;">
+        <canvas id="chart-time" height="180"></canvas>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);">
+        <span>Janela: <strong id="win-label" style="color:var(--text2);">10 s</strong></span>
+        <span>Taxa: <strong style="color:var(--text2);">100 Hz</strong></span>
+        <span>Latência: <strong id="latency" style="color:var(--text2);">— ms</strong></span>
+      </div>
+    </div>
+
+    <!-- Gráfico FFT -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Análise de frequência (FFT)</div>
+          <div class="card-subtitle">Mostra em quais frequências o pêndulo oscila · janela Hanning</div>
+        </div>
+        <span id="fnat-chip" style="display:none;font-size:11px;background:var(--green-bg);color:var(--green);border:1px solid var(--green-bdr);padding:3px 10px;border-radius:20px;font-weight:500;">fnat detectada</span>
+      </div>
+      <div class="canvas-wrap" style="margin-bottom:8px;">
+        <canvas id="chart-fft" height="180"></canvas>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);">
+        <span>Resolução: <strong style="color:var(--text2);">0.01 Hz</strong></span>
+        <span id="fnat-info" style="color:var(--text3);">Pico principal: — Hz</span>
+        <span>Tolerância: <strong style="color:var(--text2);">±0.5%</strong></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Controles + Status -->
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Controles da aquisição</div>
+          <div class="card-subtitle">Inicie a gravação quando o pêndulo estiver em posição inicial</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-bottom:18px;">
+        <button class="btn btn-primary btn-lg" id="btn-start" onclick="startStop()" style="flex:1;">
+          ▶ Iniciar gravação
+        </button>
+        <button class="btn" onclick="resetData()">↺ Zerar</button>
+        <button class="btn" onclick="window.location='analise.html'">Analisar →</button>
+      </div>
+
+      <div class="fieldset">
+        <div class="fieldset-title">
+          Tipo de teste
+          <span class="tooltip-wrap">
+            <span class="tooltip-icon">?</span>
+            <span class="tooltip-text">Pulsado: o propulsor aplica um pulso curto — o pêndulo oscila e você mede o pico. Contínuo: o propulsor opera em regime constante — você mede a deflexão permanente.</span>
+          </span>
+        </div>
+        <div class="mode-toggle">
+          <button class="mode-btn active" id="btn-pulsado" onclick="setMode('pulsado')">
+            Pulsado — mede impulso (Ibit)
+          </button>
+          <button class="mode-btn" id="btn-continuo" onclick="setMode('continuo')">
+            Contínuo — mede força (ss)
+          </button>
+        </div>
+        <div id="mode-explain" class="alert alert-info" style="margin-top:0;">
+          <span class="alert-icon">ℹ</span>
+          <span><strong>Modo pulsado:</strong> o sistema vai capturar a maior deflexão (xmax) gerada pelo impulso. Use para caracterizar PPTs e propulsores pulsados.</span>
+        </div>
+      </div>
+
+      <div class="fieldset" style="margin-bottom:0;">
+        <div class="fieldset-title">Janela de exibição</div>
+        <div class="field" style="margin-bottom:0;">
+          <div class="field-label">
+            <span>Quanto tempo exibir no gráfico</span>
+            <strong style="font-family:var(--mono);" id="win-val">10 s</strong>
+          </div>
+          <input type="range" min="5" max="60" step="5" value="10" oninput="setWindow(this.value)">
+          <div class="field-hint">Aumentar a janela não apaga dados — apenas muda o que é exibido.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Status do sistema</div>
+          <div class="card-subtitle">Verifique todos os itens antes de iniciar o teste</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <div class="step-item">
+          <div class="step-num step-done">✓</div>
+          <div class="step-body">
+            <div class="step-title">Sensor LVDT conectado</div>
+            <div class="step-desc">Comunicação serial ativa · zero perda de pacotes</div>
+          </div>
+          <span class="step-status ok">Pronto</span>
+        </div>
+        <div class="step-item">
+          <div class="step-num step-done">✓</div>
+          <div class="step-body">
+            <div class="step-title">Backend conectado</div>
+            <div class="step-desc">Servidor local rodando em localhost:8000</div>
+          </div>
+          <span class="step-status ok">Pronto</span>
+        </div>
+        <div class="step-item">
+          <div class="step-num step-active">!</div>
+          <div class="step-body">
+            <div class="step-title">Calibração da balança</div>
+            <div class="step-desc">A balança precisa ser calibrada antes de cada sessão de testes</div>
+          </div>
+          <span class="step-status active"><a href="calibracao.html" style="color:inherit;text-decoration:none;">Calibrar →</a></span>
+        </div>
+        <div class="step-item">
+          <div class="step-num step-idle">4</div>
+          <div class="step-body">
+            <div class="step-title">Pronto para teste</div>
+            <div class="step-desc">Disponível após calibração validada</div>
+          </div>
+          <span class="step-status idle">Aguardando</span>
+        </div>
+      </div>
+
+      <div class="sep"></div>
+
+      <div class="grid-2" style="gap:10px;">
+        <div class="metric">
+          <div class="metric-label">Amostras gravadas</div>
+          <div class="metric-value" id="m-samples" style="font-size:20px;">0</div>
+          <div class="metric-desc">pontos de dados</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Tempo de gravação</div>
+          <div class="metric-value" id="m-elapsed" style="font-size:20px;">0:00<span class="metric-unit">s</span></div>
+          <div class="metric-desc">duração da sessão atual</div>
+        </div>
+      </div>
+
+      <div class="alert alert-info" style="margin-top:12px;">
+        <span class="alert-icon">ℹ</span>
+        <span>Modo simulação ativo. Dados simulados com sinal de pêndulo amortecido. Conecte o LVDT para dados reais.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const FS = 100;
+let running = false, mode = 'pulsado', windowSec = 10;
+let samples = 0, elapsed = 0, tOffset = 0;
+let dataTimer = null, uiTimer = null;
+let timeBuffer = [];
+
+setInterval(() => { document.getElementById('clock').textContent = new Date().toLocaleTimeString('pt-BR'); }, 1000);
+
+const C = { accent:'#2563eb', green:'#16a34a', amber:'#d97706', red:'#dc2626', text2:'#4a5568', text3:'#9aa3b5', border:'#e2e6ef', bg3:'#f1f3f7' };
+
+function makeChart(id, label, color, xLabel, yLabel) {
+  const ctx = document.getElementById(id).getContext('2d');
+  return new Chart(ctx, {
+    type: 'line',
+    data: { labels: [], datasets: [{ label, data: [], borderColor: color, borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: false }] },
+    options: {
+      animation: false, responsive: true, maintainAspectRatio: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1a2035', borderColor: C.border, borderWidth: 1,
+          titleColor: C.text3, bodyColor: '#e2e6ef',
+          bodyFont: { family: "'JetBrains Mono'" },
+          callbacks: { label: c => c.parsed.y.toFixed(4) + (id === 'chart-time' ? ' µm' : '') }
+        }
+      },
+      scales: {
+        x: { ticks: { color: C.text3, font: { size: 10, family: "'JetBrains Mono'" }, maxTicksLimit: 8 }, grid: { color: C.border }, title: { display: true, text: xLabel, color: C.text3, font: { size: 11 } } },
+        y: { ticks: { color: C.text3, font: { size: 10, family: "'JetBrains Mono'" }, maxTicksLimit: 6 }, grid: { color: C.border }, title: { display: true, text: yLabel, color: C.text3, font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+const chartTime = makeChart('chart-time', 'Deslocamento', C.accent, 'Tempo (s)', 'Deslocamento (µm)');
+const chartFFT  = makeChart('chart-fft',  'FFT',          C.green,  'Frequência (Hz)', 'Magnitude');
+
+function genSample(t) {
+  const fn = 1.2, zeta = 0.05;
+  const wd = fn * Math.sqrt(1 - zeta * zeta);
+  if (mode === 'pulsado') {
+    return 8.0 * Math.exp(-zeta * 2 * Math.PI * fn * (t % 4)) * Math.sin(2 * Math.PI * wd * t) + (Math.random() - .5) * .3;
+  }
+  return 5.0 + .5 * Math.sin(2 * Math.PI * fn * t) + (Math.random() - .5) * .15;
+}
+
+function computeFFT(data) {
+  const N = 512, seg = data.slice(-N);
+  if (seg.length < N) return { freqs: [], mags: [] };
+  const freqs = [], mags = [];
+  for (let k = 0; k < N / 2; k++) {
+    let re = 0, im = 0;
+    for (let n = 0; n < N; n++) {
+      const w = .5 - .5 * Math.cos(2 * Math.PI * n / N);
+      const a = 2 * Math.PI * k * n / N;
+      re += w * seg[n] * Math.cos(a);
+      im -= w * seg[n] * Math.sin(a);
+    }
+    freqs.push(+(k * FS / N).toFixed(3));
+    mags.push(+(Math.sqrt(re * re + im * im) / N).toFixed(5));
+  }
+  return { freqs, mags };
+}
+
+function updateUI() {
+  const maxPts = windowSec * FS;
+  if (timeBuffer.length > maxPts) timeBuffer = timeBuffer.slice(-maxPts);
+
+  chartTime.data.labels = timeBuffer.map(d => d.t.toFixed(2));
+  chartTime.data.datasets[0].data = timeBuffer.map(d => d.v);
+  chartTime.update('none');
+
+  const vals = timeBuffer.map(d => d.v);
+  if (vals.length) {
+    const cur = vals[vals.length - 1];
+    const amp = Math.max(...vals.map(Math.abs));
+    document.getElementById('m-desl').innerHTML = cur.toFixed(3) + '<span class="metric-unit">µm</span>';
+    document.getElementById('m-amp').innerHTML  = amp.toFixed(3) + '<span class="metric-unit">µm</span>';
+
+    const cardAmp = document.getElementById('card-amp');
+    cardAmp.className = amp > 10 ? 'metric ok' : amp > 5 ? 'metric info' : 'metric';
+  }
+
+  if (timeBuffer.length >= 512) {
+    const { freqs, mags } = computeFFT(vals);
+    chartFFT.data.labels = freqs;
+    chartFFT.data.datasets[0].data = mags;
+    chartFFT.update('none');
+
+    const maxIdx = mags.indexOf(Math.max(...mags));
+    const fnat = freqs[maxIdx];
+    document.getElementById('m-fn').innerHTML = fnat.toFixed(3) + '<span class="metric-unit">Hz</span>';
+    document.getElementById('fnat-info').textContent = 'Pico principal: ' + fnat.toFixed(3) + ' Hz';
+    document.getElementById('fnat-chip').style.display = 'inline';
+    document.getElementById('fn-desc').textContent = fnat >= 0.5 && fnat <= 5 ? 'Faixa operacional ✓' : 'Fora da faixa ideal (0.5–5 Hz)';
+
+    const cardFn = document.getElementById('card-fn');
+    cardFn.className = fnat >= 0.5 && fnat <= 5 ? 'metric ok' : 'metric warn';
+  }
+
+  document.getElementById('m-samples').textContent = samples.toLocaleString('pt-BR');
+}
+
+function tick() {
+  const t0 = performance.now();
+  tOffset += 1 / FS;
+  timeBuffer.push({ t: tOffset, v: genSample(tOffset) });
+  samples++;
+  document.getElementById('latency').textContent = Math.round(performance.now() - t0 + Math.random() * 2) + ' ms';
+}
+
+function startStop() {
+  running = !running;
+  const btn = document.getElementById('btn-start');
+  const badge = document.getElementById('acq-badge');
+  if (running) {
+    btn.textContent = '⏸ Pausar gravação';
+    btn.className = 'btn btn-danger btn-lg';
+    badge.style.display = 'inline';
+    dataTimer = setInterval(tick, 1000 / FS);
+    uiTimer = setInterval(() => {
+      elapsed++;
+      const m = Math.floor(elapsed / 60), s = elapsed % 60;
+      document.getElementById('m-elapsed').innerHTML = m + ':' + String(s).padStart(2,'0') + '<span class="metric-unit">s</span>';
+      updateUI();
+    }, 200);
+  } else {
+    btn.textContent = '▶ Iniciar gravação';
+    btn.className = 'btn btn-primary btn-lg';
+    badge.style.display = 'none';
+    clearInterval(dataTimer); clearInterval(uiTimer);
+  }
+}
+
+function resetData() {
+  timeBuffer = []; samples = 0; elapsed = 0; tOffset = 0;
+  chartTime.data.labels = []; chartTime.data.datasets[0].data = [];
+  chartFFT.data.labels  = []; chartFFT.data.datasets[0].data  = [];
+  chartTime.update('none'); chartFFT.update('none');
+  ['m-desl','m-fn','m-amp'].forEach(id => { document.getElementById(id).innerHTML = '—'; });
+  document.getElementById('m-samples').textContent = '0';
+  document.getElementById('m-elapsed').innerHTML = '0:00<span class="metric-unit">s</span>';
+  document.getElementById('fnat-chip').style.display = 'none';
+  document.getElementById('fnat-info').textContent = 'Pico principal: — Hz';
+  document.getElementById('fn-desc').textContent = 'Aguardando dados suficientes…';
+  document.getElementById('card-fn').className = 'metric';
+  document.getElementById('card-amp').className = 'metric';
+}
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('btn-pulsado').className  = 'mode-btn' + (m === 'pulsado' ? ' active' : '');
+  document.getElementById('btn-continuo').className = 'mode-btn' + (m === 'continuo' ? ' active' : '');
+  document.getElementById('m-mode').textContent = m === 'pulsado' ? 'Pulsado' : 'Contínuo';
+  document.getElementById('mode-desc-top').textContent = m === 'pulsado' ? 'Captura xmax — transitório' : 'Deflexão permanente (ss)';
+  document.getElementById('mode-explain').innerHTML = m === 'pulsado'
+    ? '<span class="alert-icon">ℹ</span><span><strong>Modo pulsado:</strong> o sistema vai capturar a maior deflexão (xmax) gerada pelo impulso. Use para caracterizar PPTs e propulsores pulsados.</span>'
+    : '<span class="alert-icon">ℹ</span><span><strong>Modo contínuo:</strong> o sistema aguarda o pêndulo atingir regime permanente (sem variação &gt;0.1%) e mede a deflexão média. Filtro Butterworth ativo.</span>';
+  resetData();
+}
+
+function setWindow(v) {
+  windowSec = parseInt(v);
+  document.getElementById('win-val').textContent = v + ' s';
+  document.getElementById('win-label').textContent = v + ' s';
+}
+</script>
+</body>
+</html>
