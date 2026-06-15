@@ -1,37 +1,31 @@
 clear all; clc;
-
 % ==============================================================================
 % 1. KNOWN INPUT DATA
 % ==============================================================================
 % Dados de sensibilidade obtidos no script CG_sensibilidade.m
 S = 0.0582; % [m/N]
-S_menor = 0.0179; % [m/N]
 S_maior = 0.0939; % [m/N]
-S_S2 = 0.0697;
-S_1_junho = 0.0712;
+S_S2 = 0.0517;
+S_1_junho = 0.0518;
 
 % Vetor da primeira coluna (Deslocamento/Deflexão)
 d = [1.8039, 3.9369, 5.8372, 9.7834];
-d_menor = [1.4982, 4.3618];
 d_maior = [3.3523, 6.7382, 9.5474, 14.2316];
 d_S2 = [1.843000, 2.953000, 3.832000, 8.125000, 12.431000, 16.988000, 11.738000, 16.135000, 21.305000, 17.254000, 23.252000, 30.319000, 25.455000, 35.177000, 46.763500, 31.620000, 39.336500];
 d_1_junho = [2.403500, 3.558790, 8.633470, 13.283070, 17.047410, 11.899050, 11.899050, 17.967160, 23.099000, 17.077400, 25.282920, 43.202470, 19.815610, 30.164730, 39.264370, 26.991540, 63.414910];
-d_todos = {d, d_menor, d_maior, d_S2, d_1_junho};
+d_todos = {d, d_maior, d_S2, d_1_junho};
 
 % Vetor da segunda coluna (Força)
 f = [167.1960, 324.3694, 486.3337, 808.3664];
-f_menor = [167.1960, 618.1822];
 f_maior = [167.1960, 418.8246, 618.1822, 918.3950];
 f_S2 = [38.7153, 73.7835, 108.8517, 166.9689, 318.2088, 469.4487, 219.4649, 418.2556, 617.0463, 323.9287, 617.3423, 910.7560, 481.2407, 917.1472, 1353.0536, 634.0472, 807.2681];
 f_1_junho = [38.7153, 73.7835, 108.8517, 166.9689, 318.2088, 469.4487, 219.4649, 418.2556, 617.0463, 323.9287, 617.3423, 910.7560, 481.2407, 917.1472, 1353.0536, 634.0472, 807.2681];
-f_todos = {f, f_menor, f_maior, f_S2, f_1_junho};
+f_todos = {f, f_maior, f_S2, f_1_junho};
 
-S_todos = [S, S_menor, S_maior, S_S2];
-titulos_janela = {'S = 0.0582', 'S = 0.0179', 'S = 0.0939', 'S = 0.0697', 'S = 1 junho'};
-
+S_todos = [S, S_maior, S_S2];
+titulos_janela = {'S = 0.0582', 'S = 0.0939', 'S = 0.0697', 'S = 1 junho'};
 caminhos_salvamento = {
     'C:\Users\thami\OneDrive - unb.br\FGA\Balança de Microempuxo - LaSE\Integrated-Software-Architecture-for-Micro-Thrust-Balance\Análises\resultados\carga_constante\sensibilidade intermediaria', ...
-    'C:\Users\thami\OneDrive - unb.br\FGA\Balança de Microempuxo - LaSE\Integrated-Software-Architecture-for-Micro-Thrust-Balance\Análises\resultados\carga_constante\menor sensibilidade', ...
     'C:\Users\thami\OneDrive - unb.br\FGA\Balança de Microempuxo - LaSE\Integrated-Software-Architecture-for-Micro-Thrust-Balance\Análises\resultados\carga_constante\maior sensibilidade', ...
     'C:\Users\thami\OneDrive - unb.br\FGA\Balança de Microempuxo - LaSE\Integrated-Software-Architecture-for-Micro-Thrust-Balance\Análises\resultados\carga_constante\27_maio\S-2', ...
     'C:\Users\thami\OneDrive - unb.br\FGA\Balança de Microempuxo - LaSE\Integrated-Software-Architecture-for-Micro-Thrust-Balance\Análises\resultados\carga_constante\1_junho'
@@ -43,7 +37,7 @@ caminhos_salvamento = {
 F_extrapolada = linspace(10, 100000, 1000); 
 
 % --- Loop 1: Gerar, plotar e salvar os gráficos individuais ---
-for i = 1:4
+for i = 1:3 % Atualizado para 3 gráficos ao invés de 4
     d_atual = d_todos{i};
     f_atual = f_todos{i};
     S_atual = S_todos(i);
@@ -120,19 +114,25 @@ end
 % --- Nova Figura: Comparativo das Curvas de Tendência ---
 fig_comp = figure('Name', 'Comparativo de Sensibilidades', 'Color', 'w', 'Position', [300, 200, 900, 500]);
 hold on;
-
-estilos_linha = {'-k', '--k', ':k', '-.k'}; % 4 estilos agora para incluir S2
-legendas_comp = cell(1, 4);
-
+estilos_linha = {'-k', '--k', ':k'}; % Atualizado para 3 estilos
+legendas_comp = cell(1, 3);
 fprintf('\n--- Equações das Retas de Tendência (Feq = a * d) ---\n');
-% Loop alterado para 4, incluindo S2
-for i = 1:4 
+
+a_min = inf; % Variável para encontrar a reta com menor inclinação e definir o limite X
+
+% Loop alterado para 3
+for i = 1:3 
     d_atual = d_todos{i};
     f_atual = f_todos{i};
     S_atual = S_todos(i);
     
     % Ajuste linear forçando origem
     a = d_atual(:) \ f_atual(:);
+    
+    % Verifica a menor inclinação para definir o xlim dinâmico depois
+    if a < a_min
+        a_min = a;
+    end
     
     % Extrapolação baseada na força (10 a 100.000 µN)
     d_plot = F_extrapolada / a;
@@ -153,10 +153,8 @@ ylabel('Força F_{eq} (\muN)');
 % Impondo limites no gráfico comparativo
 ylim([10 100000]);
 
-% Para o limite de deslocamento no gráfico comparativo, pegamos a reta mais "deitada" (menor S)
-a_menor_S = d_menor(:) \ f_menor(:);
-xlim([0 max(F_extrapolada / a_menor_S)]);
-
+% Para o limite de deslocamento no gráfico comparativo, calculamos com base no a_min encontrado no loop
+xlim([0 max(F_extrapolada / a_min)]);
 grid on;
 hold off;
 
