@@ -1,13 +1,13 @@
 # Fdb version 4
-["bibtex main"] 1781719210.07787 "main.aux" "main.bbl" "main" 1781719621.21556 0
+["bibtex main"] 1781719210.07787 "main.aux" "main.bbl" "main" 1781719685.46634 0
   "./refs.bib" 1781718799 204 44f34c12034b62940de6ae898396196f ""
   "C:/Users/thami/AppData/Local/Programs/MiKTeX/bibtex/bst/natbib/unsrtnat.bst" 1284455456 24550 a41a6405f4de768c43e871d9fbce2bc8 ""
-  "main.aux" 1781719620 1115 c5f2824601b91da80a8230747bf20d83 "pdflatex"
+  "main.aux" 1781719684 1115 c5f2824601b91da80a8230747bf20d83 "pdflatex"
   (generated)
   "main.bbl"
   "main.blg"
   (rewritten before read)
-["pdflatex"] 1781719618.71295 "c:/Users/thami/OneDrive - unb.br/FGA/Balança de Microempuxo - LaSE/Integrated-Software-Architecture-for-Micro-Thrust-Balance/docs/Experimento_DCE/Roteiro_tex/main.tex" "main.pdf" "main" 1781719621.21728 0
+["pdflatex"] 1781719683.03929 "c:/Users/thami/OneDrive - unb.br/FGA/Balança de Microempuxo - LaSE/Integrated-Software-Architecture-for-Micro-Thrust-Balance/docs/Experimento_DCE/Roteiro_tex/main.tex" "main.pdf" "main" 1781719685.46716 0
   "C:/Users/thami/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map" 1781718260 262531 facb75b16c0280cc440977bb4fbd8782 ""
   "C:/Users/thami/AppData/Local/MiKTeX/fonts/pk/ljfour/jknappen/ec/dpi600/tcrm1200.pk" 1781718402 14064 9e4bfd78a82b9e08257f45f6970940cf ""
   "C:/Users/thami/AppData/Local/MiKTeX/miktex/data/le/pdftex/pdflatex.fmt" 1774190555 13333487 19ec67f77757c36098928ae12a706612 ""
@@ -185,10 +185,10 @@
   "C:/Users/thami/AppData/Local/Programs/MiKTeX/tex/latex/tools/shellesc.sty" 1761901070 4121 d611256e8b768e99aa5a680aad44990d ""
   "C:/Users/thami/AppData/Local/Programs/MiKTeX/tex/latex/url/url.sty" 1388490452 12796 8edb7d69a20b857904dd0ea757c14ec9 ""
   "C:/Users/thami/AppData/Local/Programs/MiKTeX/tex/latex/xcolor/xcolor.sty" 1729265222 55384 b454dec21c2d9f45ec0b793f0995b992 ""
-  "c:/Users/thami/OneDrive - unb.br/FGA/Balança de Microempuxo - LaSE/Integrated-Software-Architecture-for-Micro-Thrust-Balance/docs/Experimento_DCE/Roteiro_tex/main.tex" 1781719617 10719 24b3f0af537c0f9c9e36b3ee3f913048 ""
-  "main.aux" 1781719620 1115 c5f2824601b91da80a8230747bf20d83 "pdflatex"
+  "c:/Users/thami/OneDrive - unb.br/FGA/Balança de Microempuxo - LaSE/Integrated-Software-Architecture-for-Micro-Thrust-Balance/docs/Experimento_DCE/Roteiro_tex/main.tex" 1781719682 10729 18bb5e912c19149c03cde9d0a71b7c6f ""
+  "main.aux" 1781719684 1115 c5f2824601b91da80a8230747bf20d83 "pdflatex"
   "main.bbl" 1781719210 520 efbff01ffe68395aa23c685accbfbad9 "bibtex main"
-  "main.tex" 1781719617 10719 24b3f0af537c0f9c9e36b3ee3f913048 ""
+  "main.tex" 1781719682 10729 18bb5e912c19149c03cde9d0a71b7c6f ""
   (generated)
   "main.aux"
   "main.log"
