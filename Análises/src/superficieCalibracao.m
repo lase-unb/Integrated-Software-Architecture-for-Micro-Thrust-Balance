@@ -14,7 +14,7 @@ S       = 0.0582;
 S_maior = 0.0939; 
 S_S2    = 0.0697;
 S_1_junho = 0.0518;
-S_10_junho = ;
+S_10_junho = 0.04;
 
 % Displacement and Force vectors for each case
 d_inter = [1.8039, 3.9369, 5.8372, 9.7834];
@@ -124,7 +124,7 @@ xlabel('Deslocamento (\mum)');
 ylabel('Força F_{eq} (\muN)');
 
 % Limite Y imposto de 10 a 100.000 µN mantido
-ylim([10 100000]); 
+ylim([50 100000]); 
 % Limite X forçado de 0 até 4000 µm
 xlim([0 4000]);
 
