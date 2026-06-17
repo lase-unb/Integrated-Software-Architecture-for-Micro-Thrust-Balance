@@ -1,0 +1,154 @@
+\documentclass[12pt,a4paper,twoside]{article}
+
+% are used to comment out text
+
+%------------------------------------------------------------------------------------------------------------
+%EDIT THESE FIELDS WITH YOUR DETAILS
+%------------------------------------------------------------------------------------------------------------
+\newcommand{\studentname}{Thamiris Thomazini Libard}
+%\newcommand{\studentnumber}{}
+\title{Experimento de Validação do Dispositivo de Calibração Eletrostática (DCE) \\ Roteiro}
+\newcommand{\tutor}{Dr. Lui Habl}
+%\newcommand{\labgroup}{}
+\newcommand{\labdate}{July 2026}
+\newcommand{\reportdate}{\today}
+%------------------------------------------------------------------------------------------------------------
+
+%------------------------------------------------------------------------------------------------------------
+%PACKAGES. PACKAGES ARE USED TO EXTEND THE FUNCTIONALITY OF LATEX. YOU SHOULDN'T
+%NEED ANY MORE, SPEND YOUR TIME ON THE CONTENT!
+%------------------------------------------------------------------------------------------------------------
+
+\usepackage[a4paper,left=25mm,right=25mm,bottom=25mm,top=25mm]{geometry}
+\usepackage{fancyhdr}
+\usepackage{subfigure}
+\usepackage{graphicx}
+\usepackage{cleveref}
+\usepackage{booktabs}
+\usepackage[british]{babel}
+\usepackage[square,comma,numbers,sort&compress]{natbib}
+\usepackage{csvsimple}
+\usepackage{graphicx}
+\usepackage{pgfplotstable}
+\usepackage{gensymb}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{url}
+\pgfplotsset{compat=1.9}% supress warning
+\begin{document}
+
+%------------------------------------------------------------------------------------------------------------
+
+%------------------------------------------------------------------------------------------------------------
+%DO NOT EDIT THESE FIELDS
+%------------------------------------------------------------------------------------------------------------
+\setlength{\parindent}{0em}
+\setlength{\parskip}{0.5em}
+\author{\studentname \\ Orientação: \tutor.}
+\date{Data do Relatório: \reportdate.}
+
+\renewcommand\abstractname{Summary}
+
+\pagestyle{fancy}
+\fancyhead{}
+%\fancyhead[C]{\studentname~\studentnumber}
+\fancyfoot{}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+\renewcommand\bibname{Referências}
+
+%------------------------------------------------------------------------------------------------------------
+
+\renewcommand\abstractname{Resumo}
+\maketitle
+
+%------------------------------------------------------------------------------------------------------------
+% REPORT BEGINS HERE
+%------------------------------------------------------------------------------------------------------------
+
+
+\begin{abstract}
+The aim of this laboratory work is to design a strut/bracket assembly for aircrafts. Experiments are carried out to determine mechanical properties of certain materials.The material chosen is Mild Steel. Given the possible condition experienced by the material and the safety factor, the dimensions for the designs of the strut/bracket assembly for aircrafts are obtained to avoid failure by yield or fracture. The diameter of the pin, d ,which is subjected to shear stress should be larger than 14.56mm. The diameter of the rod, D, should be larger than 12.74mm. The thickness of the rod would be 10mm.
+\end{abstract}
+
+\section{Introdução}
+The aim of this laboratory work is to design a strut/bracket assembly for aircrafts. The materials selection comes from a multi-criteria analysis. The components must be designed to avoid failure by yield or fracture. Temperature difference is also a parameter that must be taken into consideration as temperatures may vary from -50°C to +85°C or even higher in areas close to the engines. Finally, for aeronautical applications, high strength is needed at low weight. When comparing materials it is useful to get their properties from standardised tests. In this lab, three different tests have been performed (tensile test, torsion test and Charpy impact test) on different materials. From these tests, important parameters such as yield strength, toughness and Young’s modulus can be determined in order to choose the most appropriate material to use depending on the external forces and the temperature. Finally, knowing the material properties, dimensions of the assembly can be calculated to avoid damage. Indeed the nominal maximum stress values should be less than the strength of the material (yield stress limit). \cite{halliday}
+
+%%%%%%%%%%%%%%%%
+\section{Protocolos de Segurança e EPIs}
+
+Antes de iniciar qualquer etapa prática, os procedimentos de segurança contra Alta Tensão devem ser estritamente seguidos.
+
+\subsection*{Equipamentos de Proteção Individual (EPIs):}
+\begin{itemize}
+    \item \textbf{Luvas Isolantes (Classe 0):} Específicas para trabalhos elétricos, certificadas para suportar até 1000\,V AC ou 1500\,V DC. Devem ser usadas com luvas de vaqueta por cima para proteção mecânica.
+    \item \textbf{Calçado de Segurança com Isolamento Elétrico:} Calçado fechado sem componentes metálicos.
+    \item \textbf{Óculos de Segurança:} Essencial caso ocorra a ruptura dielétrica do ar (centelha) entre as placas do DCE, o que pode ejetar pequenas partículas de alumínio.
+    \item \textbf{Jaleco/Vestimenta 100\% Algodão:} Materiais sintéticos derretem na pele em caso de arco elétrico.
+\end{itemize}
+
+\subsection*{Equipamentos de Proteção Coletiva (EPCs) e Cuidados Especiais:}
+\begin{itemize}
+    \item \textbf{Tapete Isolante de Borracha:} Deve estar posicionado no chão, onde o operador da fonte HV ficará em pé.
+    \item \textbf{Bastão de Aterramento (Bastão de Descarga):} Essencial para o pós-teste. O DCE atua como um capacitor e armazena carga. Mesmo com a fonte desligada, as placas podem reter carga suficiente para causar um choque severo.
+    \item \textbf{Sinalização e Isolamento:} A área ao redor da balança deve estar demarcada com faixas de ``Perigo: Alta Tensão''.
+    \item \textbf{Prevenção de Ruptura Dielétrica:} Centelhas aparecem na extremidade de condutores quando o campo elétrico provoca a ruptura dielétrica do ar. A 1000\,V em pressão atmosférica, se as placas estiverem muito coladas (ex: menor que 0,5\,mm), uma centelha pode ocorrer, podendo fechar um curto-circuito na sua fonte. Garanta que a distância (\textit{gap}) seja segura.
+\end{itemize}
+
+\section{Preparação do Sistema (Com a fonte TOTALMENTE desligada)}
+
+\begin{enumerate}
+    \item \textbf{Montagem Mecânica:} Fixe um disco de alumínio no braço móvel do pêndulo e o outro disco no suporte fixo da base.
+    \item \textbf{Alinhamento:} Utilize um paquímetro ou micrômetro para ajustar a distância $D_E$ (entre-ferro) inicial entre os discos de alumínio. Garanta que as placas estejam perfeitamente paralelas.
+    \item \textbf{Cabeamento:} Conecte os cabos de alta tensão da fonte de tensão Magna-Power aos eletrodos do DCE. Garanta que os cabos estejam fixos e não interfiram excessivamente na rigidez mecânica (constante elástica) do pêndulo.
+    \item \textbf{Aterramento:} Verifique se o chassi da balança e a carcaça da fonte de tensão estão devidamente aterrados na malha do laboratório.
+\end{enumerate}
+
+\section{Execução do Experimento (Teste Estático em Atmosfera)}
+
+Este procedimento descreve a calibração primária do DCE, onde a constante $K_{dce}$ será validada na pressão atmosférica, antes de ir para o vácuo.
+
+\begin{enumerate}
+    \item \textbf{Afastamento:} Todos os envolvidos devem se afastar da balança e ficar atrás de uma barreira ou a uma distância segura, sobre o tapete isolante.
+    \item \textbf{Ligação do Sistema:} Ligue a alimentação geral do laboratório e ligue a fonte Magna-Power, garantindo que o controle de tensão esteja zerado (0\,V) e o limite de corrente (corrente de corte) configurado para um valor mínimo de segurança (ex: 10\,mA, pois o DCE não consome corrente em estado estacionário por ser um capacitor; se puxar corrente, há um curto ou fuga).
+    \item \textbf{Degraus de Tensão:} Aumente a tensão para 100\,V. \\
+    \textit{Atenção:} Ao aplicar a tensão contínua, o pêndulo será atraído e passará a oscilar em torno de uma nova coordenada de equilíbrio.
+    \item \textbf{Regime Estacionário:} É estritamente necessário aguardar a completa atenuação do regime transiente (oscilações) até que o sistema atinja o regime estacionário para efetuar a leitura do deslocamento. Aguardar 3 minutos para garantir que as oscilações tenham cessado.
+    \item \textbf{Registro de Dados:} Anote a deflexão (deslocamento $\Delta x$) medida pelo seu sensor (ex: laser ou LVDT) e a tensão aplicada (script em Python automatizado).
+    \item \textbf{Progressão:} Repita os passos de aumento de tensão em incrementos de 100\,V (100\,V, 200\,V, 300\,V, 400\,V, 500\,V, 600\,V, 700\,V, 800\,V e 1000\,V). Espere o regime estacionário e anote os dados em cada degrau.
+\end{enumerate}
+
+\section{Desenergização e Coleta de Dados}
+
+\begin{enumerate}
+    \item \textbf{Redução de Tensão:} No painel da fonte Magna-Power, reduza gradativamente a tensão de 1000\,V de volta para 0\,V.
+    \item \textbf{Desligamento Geral:} Desligue o botão de \textit{Output} da fonte e, em seguida, a chave geral da fonte.
+    \item \textbf{Procedimento de Descarga (Crítico):} 
+    \begin{itemize}
+        \item Coloque as Luvas Isolantes Classe 0.
+        \item Pegue o bastão de aterramento.
+        \item Encoste a ponta do bastão simultaneamente nos terminais de ambas as placas do DCE (ou faça o aterramento de uma placa contra a outra) para curtocircuitar o capacitor e garantir que toda a energia potencial armazenada no campo elétrico seja dissipada.
+        \item Mantenha o bastão no local por cerca de 5 segundos.
+    \end{itemize}
+    \item \textbf{Análise de Dados:}
+    \begin{itemize}
+        \item Organize os dados coletados em um gráfico. No eixo X, coloque o quadrado da tensão aplicada ($V^2$) e no eixo Y, o deslocamento medido ou a força calculada.
+        \item A relação deverá ser estritamente linear, comprovando a equação teórica da força do capacitor de placas paralelas ($F_c \propto V^2/d^2$). A inclinação desta reta fornecerá a constante experimental do seu DCE.
+    \end{itemize}
+\end{enumerate}
+
+%%%%%%%%%%%%%%%%
+\section{Resultados}
+
+
+%%%%%%%%%%%%%%%%
+\section{Conclusões}
+
+
+\newpage
+\bibliographystyle{unsrtnat}
+\bibliography{refs}
+
+\end{document}
