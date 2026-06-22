@@ -5,10 +5,10 @@
 %------------------------------------------------------------------------------------------------------------
 %EDIT THESE FIELDS WITH YOUR DETAILS
 %------------------------------------------------------------------------------------------------------------
-\newcommand{\studentname}{Thamiris Thomazini Libard}
+\newcommand{\studentname}{}
 %\newcommand{\studentnumber}{}
 \title{Experimento de Validação do Dispositivo de Calibração Eletrostática (DCE) \\ Roteiro}
-\newcommand{\tutor}{Dr. Lui Habl}
+\newcommand{\tutor}{}
 %\newcommand{\labgroup}{}
 \newcommand{\labdate}{July 2026}
 \newcommand{\reportdate}{XX Julho de 2026}
@@ -44,10 +44,8 @@
 %------------------------------------------------------------------------------------------------------------
 \setlength{\parindent}{0em}
 \setlength{\parskip}{0.5em}
-\author{\studentname \\ Orientação: \tutor.}
+%\author{\studentname \\ Orientação: \tutor.}
 \date{Data do Relatório: \reportdate.}
-
-\renewcommand\abstractname{Summary}
 
 \pagestyle{fancy}
 \fancyhead{}
@@ -61,21 +59,11 @@
 
 %------------------------------------------------------------------------------------------------------------
 
-\renewcommand\abstractname{Resumo}
 \maketitle
 
 %------------------------------------------------------------------------------------------------------------
 % REPORT BEGINS HERE
 %------------------------------------------------------------------------------------------------------------
-
-
-\begin{abstract}
-The aim of this laboratory work is to design a strut/bracket assembly for aircrafts. Experiments are carried out to determine mechanical properties of certain materials.The material chosen is Mild Steel. Given the possible condition experienced by the material and the safety factor, the dimensions for the designs of the strut/bracket assembly for aircrafts are obtained to avoid failure by yield or fracture. The diameter of the pin, d ,which is subjected to shear stress should be larger than 14.56mm. The diameter of the rod, D, should be larger than 12.74mm. The thickness of the rod would be 10mm.
-\end{abstract}
-
-\section{Introdução}
-The aim of this laboratory work is to design a strut/bracket assembly for aircrafts. The materials selection comes from a multi-criteria analysis. The components must be designed to avoid failure by yield or fracture. Temperature difference is also a parameter that must be taken into consideration as temperatures may vary from -50°C to +85°C or even higher in areas close to the engines. Finally, for aeronautical applications, high strength is needed at low weight. When comparing materials it is useful to get their properties from standardised tests. In this lab, three different tests have been performed (tensile test, torsion test and Charpy impact test) on different materials. From these tests, important parameters such as yield strength, toughness and Young’s modulus can be determined in order to choose the most appropriate material to use depending on the external forces and the temperature. Finally, knowing the material properties, dimensions of the assembly can be calculated to avoid damage. Indeed the nominal maximum stress values should be less than the strength of the material (yield stress limit). \cite{halliday}
-
 %%%%%%%%%%%%%%%%
 \section{Protocolos de Segurança e EPIs}
 
@@ -97,7 +85,7 @@ Antes de iniciar qualquer etapa prática, os procedimentos de segurança contra 
     \item \textbf{Prevenção de Ruptura Dielétrica:} Centelhas aparecem na extremidade de condutores quando o campo elétrico provoca a ruptura dielétrica do ar. A 1000\,V em pressão atmosférica, se as placas estiverem muito coladas (ex: menor que 0,5\,mm), uma centelha pode ocorrer, podendo fechar um curto-circuito na sua fonte. Garanta que a distância (\textit{gap}) seja segura.
 \end{itemize}
 
-\section{Preparação do Sistema (Com a fonte TOTALMENTE desligada)}
+\section{Preparação do Sistema (Com a fonte totalmente desligada)}
 
 \begin{enumerate}
     \item \textbf{Montagem Mecânica:} Fixe um disco de alumínio no braço móvel do pêndulo e o outro disco no suporte fixo da base.
@@ -116,7 +104,8 @@ Este procedimento descreve a calibração primária do DCE, onde a constante $K_
     \item \textbf{Degraus de Tensão:} Aumente a tensão para 100\,V. \\
     \textit{Atenção:} Ao aplicar a tensão contínua, o pêndulo será atraído e passará a oscilar em torno de uma nova coordenada de equilíbrio.
     \item \textbf{Regime Estacionário:} É estritamente necessário aguardar a completa atenuação do regime transiente (oscilações) até que o sistema atinja o regime estacionário para efetuar a leitura do deslocamento. Aguardar 3 minutos para garantir que as oscilações tenham cessado.
-    \item \textbf{Registro de Dados:} Anote a deflexão (deslocamento $\Delta x$) medida pelo seu sensor (ex: laser ou LVDT) e a tensão aplicada (script em Python automatizado).
+    \item \textbf{Registro de Dados:} Salve o gráfico de deslocamento do pêndulo (eixo Y) versus tempo (eixo X) usando o software de aquisição. Anote o valor do deslocamento final (posição de equilíbrio) e a tensão aplicada obtido pelo script para cada caso.
+    \item \textbf{Repetitibilidade}: Repita o passo de 100\,V mais 4 vezes para garantir a repetibilidade dos dados.
     \item \textbf{Progressão:} Repita os passos de aumento de tensão em incrementos de 100\,V (100\,V, 200\,V, 300\,V, 400\,V, 500\,V, 600\,V, 700\,V, 800\,V e 1000\,V). Espere o regime estacionário e anote os dados em cada degrau.
 \end{enumerate}
 
@@ -149,6 +138,6 @@ Este procedimento descreve a calibração primária do DCE, onde a constante $K_
 
 \newpage
 \bibliographystyle{unsrtnat}
-\bibliography{refs}
+%\bibliography{refs}
 
 \end{document}
