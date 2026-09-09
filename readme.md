@@ -45,17 +45,17 @@ Integrated-Software-Architecture-for-Micro-Thrust-Balance/
 │   │   ├── superficie_calibracao.m
 │   │   ├── 2_modo_vibracao.py       # Análise de modos de vibração
 │   │   └── calibracao.py
-│   ├── find_deflection.py           # Análise de deflexão + incerteza GUM
-│   ├── k_calculation.py             # Constante de rigidez torcional k
+│   ├── find_deflection.py           # Análise de deflexão + incerteza GUM (importado por interface/main.py)
+│   ├── k_calculation.py             # Constante de rigidez torcional k (importado por interface/main.py)
 │   └── pendulum-dynamic.py          # Modelo dinâmico do pêndulo
 │
 ├── signal_processing/               # Camadas 1 e 2 — FFT + DSP
-│   ├── fn_calculation.py            # Análise espectral FFT + detecção de fn
-│   ├── processing.py                # Filtro Butterworth 5ª ordem + conversão µm→mN
+│   ├── fn_calculation.py            # Análise espectral FFT + detecção de fn (importado por interface/main.py)
+│   ├── processing.py                # Filtro Butterworth 5ª ordem + Kalman + conversão µm→mN
 │   └── simulator.py                 # Gêmeo Digital do sistema dinâmico
 │
 ├── interface/                       # Camada 4 — interface e relatórios
-│   ├── main.py                      # Aplicação Streamlit (entry point)
+│   ├── main.py                      # Aplicação Streamlit (entry point — abas de calibração, aquisição e análise/exportação)
 │   ├── live_plot.py                 # Telemetria em tempo real (50 ms)
 │   ├── report_pdf.py                # Gerador de relatório PDF bilíngue PT/EN
 │   └── web/                         # Interface web alternativa (HTML/CSS)
@@ -68,15 +68,11 @@ Integrated-Software-Architecture-for-Micro-Thrust-Balance/
 │   └── data_acquisition.py          # Interface serial USB com LVDT
 │
 ├── tools/                           # Scripts auxiliares
-│   └── LVDT_Plot_V2.py              # Identificação de deslocamento máximo
+│   └── LVDT_Plot_V2.py              # Identificação de deslocamento máximo (importado por interface/main.py)
 │
 ├── docs/                            # Documentação técnica
 │   └── balanca.md                   # Especificações da balança
 │
-├── data/                            # Dados experimentais (ver .gitignore)
-│   └── Calibration Data/            # Dados de calibração
-│
-├── main.py                          # Entry point principal (streamlit run main.py)
 ├── requirements.txt                 # Dependências Python
 ├── .gitignore
 └── README.md
@@ -102,7 +98,7 @@ cd Integrated-Software-Architecture-for-Micro-Thrust-Balance
 pip install -r requirements.txt
 
 # Execute a interface principal
-streamlit run main.py
+streamlit run interface/main.py
 ```
 
 ---
@@ -116,9 +112,12 @@ streamlit run main.py
 | 2 — Gêmeo Digital | `signal_processing/simulator.py` | Modelo dinâmico para sintonização do Kalman |
 | 3 — Calibração | `calibration/k_calculation.py` | Constante k, ajuste linear, R² |
 | 3 — Metrologia | `calibration/find_deflection.py` | Deflexão + incerteza σ_d (GUM) |
-| 4 — Interface | `interface/main.py` | Streamlit: calibração, aquisição, análise |
+| 3 — Pico de deflexão | `tools/LVDT_Plot_V2.py` | Identificação de xmax (regime pulsado) |
+| 4 — Interface | `interface/main.py` | Streamlit: calibração, aquisição, análise (3 abas) |
 | 4 — Telemetria | `interface/live_plot.py` | Monitoramento tempo real (50 ms) |
-| 4 — Relatório | `interface/report_pdf.py` | PDF institucional bilíngue PT/EN |
+| 4 — Relatório | `interface/report_pdf.py` | PDF institucional bilíngue PT/EN, via ReportLab |
+
+Os módulos das Camadas 1–3 (`fn_calculation.py`, `find_deflection.py`, `k_calculation.py`, `LVDT_Plot_V2.py`) funcionam tanto de forma independente (`python <script>.py`, para análise offline de um arquivo) quanto importados diretamente por `interface/main.py` — não há lógica duplicada entre o app e os scripts standalone.
 
 ---
 

@@ -423,37 +423,6 @@ def gerar_pdf(
     r2_calib=None,
     err_theta_calib=None,
 ):
-from report_pdf import gerar_pdf
-
-# Substitui o st.button de PDF por:
-if st.button("⬇️ Gerar PDF", use_container_width=True):
-    with st.spinner("Gerando relatório PDF..."):
-        pdf_bytes = gerar_pdf(
-            time_arr      = time_arr,
-            thrust_mn     = thrust_mn_full,
-            metrics       = metrics_full,
-            params_calib  = {
-                "k_torque": st.session_state.k_torque,
-                "l_lvdt":   st.session_state.l_lvdt,
-                "l_thrust": st.session_state.l_thrust,
-                "fn":       st.session_state.fn_calculada,
-                "S":        st.session_state.S_calculada,
-            },
-            modo_teste    = st.session_state.modo_teste,
-            nome_sessao   = nome_arquivo,
-            fnat          = st.session_state.fn_calculada,
-            xf            = xf if 'xf' in dir() else None,
-            yr            = yr if 'yr' in dir() else None,
-            yf            = yf if 'yf' in dir() else None,
-        )
-    st.download_button(
-        "📄 Baixar PDF",
-        data      = pdf_bytes,
-        file_name = nome_arquivo + ".pdf",
-        mime      = "application/pdf",
-        use_container_width=True,
-    )
-
     if nome_sessao is None:
         nome_sessao = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     timestamp = datetime.now().strftime("%d/%m/%Y %H:%M:%S")

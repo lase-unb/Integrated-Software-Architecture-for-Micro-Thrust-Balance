@@ -5,70 +5,81 @@ Focado em: Identificação da dinâmica estrutural da balança.
 """
 
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy.fft import rfft, rfftfreq
-import pandas as pd
-from processing import apply_lowpass_filter 
 
-# --- 1. CONFIGURAÇÕES ---
-Filename = '5.caldata_m4_l5_F9,725.txt'
-cutoff_freq = 0.5  # 0.5Hz para não cortar a Fn por engano
-order = 5
-MaxF = 2 # 2Hz para dar "zoom" no que importa 
+from processing import apply_lowpass_filter
 
-# --- 2. CARREGAMENTO DOS DADOS ---
-data = pd.read_csv(Filename, sep="\t", header=None, decimal=',')
-time = data[0].values
-d_raw = data[1].values * 1000
 
-# Remoção de offset (Centraliza o sinal no zero para a FFT ser precisa)
-d_centered = d_raw - np.mean(d_raw)
+def calcular_fnat(d_um, fs, cutoff=0.5, max_freq=5.0):
+    """
+    FFT com remoção de offset — retorna (fnat, freqs, magnitudes_raw, magnitudes_filt).
 
-# Cálculo da Frequência de Amostragem (fs)
-N = len(d_centered)
-fs = N / (time[-1] - time[0])
-print(f'Sampling Freq = {fs:.2f} Hz')
+    d_um: deslocamento bruto (µm). fs: frequência de amostragem (Hz).
+    cutoff: corte do filtro passa-baixa usado para limpar o espectro.
+    max_freq: limite superior de frequência considerado na busca do pico.
+    """
+    d_centered = d_um - np.mean(d_um)
+    d_filt = apply_lowpass_filter(d_centered, fs=fs, cutoff_freq=cutoff)
 
-# --- 3. PROCESSAMENTO DIGITAL DE SINAIS (DSP) ---
-# Filtra o sinal para limpar o espectro de frequências parasitas
-d_filtered = apply_lowpass_filter(d_centered, fs=fs, cutoff_freq=cutoff_freq)
+    N = len(d_centered)
+    yf_raw = rfft(d_centered) / N * 2
+    yf_filt = rfft(d_filt) / N * 2
+    xf = rfftfreq(N, 1.0 / fs)
 
-# FFT do sinal original e do sinal filtrado
-yf_raw = rfft(d_centered) / N * 2
-yf_filt = rfft(d_filtered) / N * 2
-xf = rfftfreq(N, 1/fs)
+    mask = (xf > 0.01) & (xf <= max_freq)
+    xf_m = xf[mask]
+    yr_m = np.abs(yf_raw[mask])
+    yf_m = np.abs(yf_filt[mask])
 
-# Identifica a Frequência Natural (Pico de maior amplitude no sinal filtrado)
-P = np.argmax(np.abs(yf_filt))
-fn = xf[P]
-print(f'Natural Freq Detectada = {fn:.5f} Hz')
+    if len(yf_m) == 0:
+        return 0.0, xf_m, yr_m, yf_m
 
-# --- 4. VISUALIZAÇÃO ---
-fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
+    peak_idx = np.argmax(yf_m)
+    fnat = xf_m[peak_idx]
+    return float(fnat), xf_m, yr_m, yf_m
 
-# Gráfico 1: Domínio do Tempo
-ax1.plot(time, d_centered, color='lightgray', alpha=0.7, label='Raw Signal')
-ax1.plot(time, d_filtered, color='blue', label='Filtered (DSP)')
-ax1.set_ylabel('Displacement (µm)')
-ax1.set_title('Signal Decays / Vibrations')
-ax1.legend()
-ax1.grid(True, alpha=0.3)
 
-# Gráfico 2: Domínio da Frequência (FFT)
-# Limitando o gráfico para ver apenas até MaxF Hz
-mask = xf <= MaxF
-ax2.plot(xf[mask], np.abs(yf_raw[mask]), color='lightgray', label='Raw Spectrum')
-ax2.plot(xf[mask], np.abs(yf_filt[mask]), color='red', linewidth=1.5, label='Filtered Spectrum')
+if __name__ == "__main__":
+    import sys
 
-# Marcação da Frequência Natural
-ax2.plot(fn, np.abs(yf_filt[P]), "x", color='black', markersize=10, 
-         label=f'Natural Frequency: {fn:.4f} Hz')
+    import matplotlib.pyplot as plt
+    import pandas as pd
 
-ax2.set_xlabel('Frequency (Hz)')
-ax2.set_ylabel('Magnitude')
-ax2.set_title('Fast Fourier Transform (FFT) Analysis')
-ax2.legend()
-ax2.grid(True, alpha=0.3)
+    Filename = sys.argv[1] if len(sys.argv) > 1 else '5.caldata_m4_l5_F9,725.txt'
+    cutoff_freq = 0.5  # 0.5Hz para não cortar a Fn por engano
+    MaxF = 2            # 2Hz para dar "zoom" no que importa
 
-plt.tight_layout()
-plt.show()
+    data = pd.read_csv(Filename, sep="\t", header=None, decimal=',')
+    time = data[0].values
+    d_raw = data[1].values * 1000
+
+    fs = len(d_raw) / (time[-1] - time[0])
+    print(f'Sampling Freq = {fs:.2f} Hz')
+
+    fn, xf, yr, yf = calcular_fnat(d_raw, fs, cutoff=cutoff_freq, max_freq=MaxF)
+    print(f'Natural Freq Detectada = {fn:.5f} Hz')
+
+    d_centered = d_raw - np.mean(d_raw)
+    d_filtered = apply_lowpass_filter(d_centered, fs=fs, cutoff_freq=cutoff_freq)
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
+
+    ax1.plot(time, d_centered, color='lightgray', alpha=0.7, label='Raw Signal')
+    ax1.plot(time, d_filtered, color='blue', label='Filtered (DSP)')
+    ax1.set_ylabel('Displacement (µm)')
+    ax1.set_title('Signal Decays / Vibrations')
+    ax1.legend()
+    ax1.grid(True, alpha=0.3)
+
+    ax2.plot(xf, yr, color='lightgray', label='Raw Spectrum')
+    ax2.plot(xf, yf, color='red', linewidth=1.5, label='Filtered Spectrum')
+    ax2.plot(fn, yf[np.argmax(yf)] if len(yf) else 0, "x", color='black', markersize=10,
+             label=f'Natural Frequency: {fn:.4f} Hz')
+    ax2.set_xlabel('Frequency (Hz)')
+    ax2.set_ylabel('Magnitude')
+    ax2.set_title('Fast Fourier Transform (FFT) Analysis')
+    ax2.legend()
+    ax2.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    plt.show()

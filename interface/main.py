@@ -10,8 +10,6 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-from scipy.fft import rfft, rfftfreq
-from scipy import signal as scipy_signal
 import math
 import io
 import os
@@ -21,13 +19,22 @@ from datetime import datetime
 
 # ── Importa módulos do projeto ──────────────────────────────────────────────
 import sys, os
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+_here = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, _here)
+sys.path.insert(0, os.path.join(_here, '..', 'signal_processing'))
+sys.path.insert(0, os.path.join(_here, '..', 'calibration'))
+sys.path.insert(0, os.path.join(_here, '..', 'tools'))
 from processing import apply_lowpass_filter, convert_to_mn, calculate_metrics
+from report_pdf import gerar_pdf
+from find_deflection import calcular_deflexao as _calcular_deflexao_mod
+from k_calculation import calibracao_estatica as _calibracao_estatica_mod
+from fn_calculation import calcular_fnat as _calcular_fnat_mod
+from LVDT_Plot_V2 import detectar_xmax as _detectar_xmax_mod
 
 # ── Configuração da página ───────────────────────────────────────────────────
 st.set_page_config(
     page_title="LaSE — Balança de Microempuxo",
-    page_icon="🛰️",
+    page_icon=None,
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -38,6 +45,7 @@ st.markdown("""
     .block-container { padding-top: 1.5rem; }
     .stMetric { background: #f8f9fb; border: 1px solid #e2e6ef; border-radius: 8px; padding: 12px; }
     .stAlert  { border-radius: 8px; }
+    .stAlert p { margin: 0; }
     div[data-testid="stMetricValue"] { font-size: 1.4rem; font-weight: 600; }
     .req-badge {
         display: inline-block; font-size: 10px; font-weight: 600;
@@ -46,6 +54,7 @@ st.markdown("""
     }
     .section-title { font-size: 13px; font-weight: 600; color: #4a5568;
         text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; }
+    .stDownloadButton button { font-weight: 500; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -63,83 +72,36 @@ def calcular_fs(time_arr):
 
 def calcular_fnat(d_um, fs, cutoff=0.5, max_freq=5.0):
     """
-    FFT com janela Hanning — retorna (fnat, freqs, magnitudes_raw, magnitudes_filt).
-    Implementação de fn_calculation.py adaptada para Streamlit.
+    FFT com remoção de offset — retorna (fnat, freqs, magnitudes_raw, magnitudes_filt).
+    Delegado a signal_processing/fn_calculation.py (módulo canônico da Camada 1).
     """
-    d_centered = d_um - np.mean(d_um)
-    d_filt = apply_lowpass_filter(d_centered, fs=fs, cutoff_freq=cutoff)
-
-    N = len(d_centered)
-    yf_raw  = rfft(d_centered) / N * 2
-    yf_filt = rfft(d_filt)     / N * 2
-    xf = rfftfreq(N, 1.0 / fs)
-
-    # Limita ao intervalo útil
-    mask = (xf > 0.01) & (xf <= max_freq)
-    xf_m  = xf[mask]
-    yr_m  = np.abs(yf_raw[mask])
-    yf_m  = np.abs(yf_filt[mask])
-
-    if len(yf_m) == 0:
-        return 0.0, xf_m, yr_m, yf_m
-
-    peak_idx = np.argmax(yf_m)
-    fnat = xf_m[peak_idx]
-    return float(fnat), xf_m, yr_m, yf_m
+    return _calcular_fnat_mod(d_um, fs, cutoff=cutoff, max_freq=max_freq)
 
 
 def calcular_deflexao(time_arr, d_um, t1_start, t1_end, t2_start, t2_end, fs, cutoff=0.05):
     """
     Calcula deflexão entre baseline e patamar com incerteza.
-    Implementação de find_deflection.py adaptada.
+    Delegado a calibration/find_deflection.py (módulo canônico da Camada 3).
     """
-    b, a = scipy_signal.butter(5, cutoff, btype='lowpass', fs=fs)
-    d_filt = scipy_signal.filtfilt(b, a, d_um)
-
-    def janela(t0, t1):
-        idx = (time_arr >= t0) & (time_arr <= t1)
-        w = d_filt[idx]
-        return w.mean(), w.std(), time_arr[idx]
-
-    av1, std1, tw1 = janela(t1_start, t1_end)
-    av2, std2, tw2 = janela(t2_start, t2_end)
-    delta = abs(av2 - av1)
-    incerteza = math.sqrt(std1**2 + std2**2)
-
-    return {
-        "delta_um": delta, "incerteza_um": incerteza,
-        "av1": av1, "std1": std1, "tw1": tw1,
-        "av2": av2, "std2": std2, "tw2": tw2,
-        "d_filt": d_filt
-    }
+    return _calcular_deflexao_mod(time_arr, d_um, t1_start, t1_end, t2_start, t2_end,
+                                   fs, cutoff=cutoff)
 
 
 def detectar_xmax(d_um, fs, cutoff=0.1):
     """
-    Identifica xmax (primeiro pico-vale) no sinal filtrado.
-    Implementação de LVDT_Plot_V2.py adaptada.
+    Identifica xmax (maior deflexão absoluta) no sinal filtrado.
+    Delegado a tools/LVDT_Plot_V2.py (módulo canônico de identificação de pico).
     """
-    d_filt = apply_lowpass_filter(d_um, fs=fs, cutoff_freq=cutoff)
-    peak_idx = np.argmax(np.abs(d_filt))
-    return float(d_filt[peak_idx]), peak_idx, d_filt
+    return _detectar_xmax_mod(d_um, fs, cutoff=cutoff)
 
 
 def calibracao_estatica(massas_kg, desl_m, erros_m, g=9.81, l_aplicacao=0.005, L_lvdt=0.3):
     """
-    Regressão linear para determinar k.
-    Implementação de k_calculation.py adaptada.
+    Regressão linear T(θ) = k·θ + a para determinar a rigidez torcional k.
+    Delegado a calibration/k_calculation.py (módulo canônico da Camada 3).
     """
-    Mteq  = massas_kg * g * l_aplicacao
-    Theta = desl_m / L_lvdt
-    err_theta = erros_m / L_lvdt
-
-    k, a_off = np.polyfit(Theta, Mteq, deg=1)
-    y_pred = a_off + k * Theta
-    ss_res = np.sum((Mteq - y_pred)**2)
-    ss_tot = np.sum((Mteq - np.mean(Mteq))**2)
-    r2 = 1 - ss_res / ss_tot if ss_tot != 0 else 0.0
-
-    return float(k), float(a_off), float(r2), Theta, Mteq, err_theta
+    return _calibracao_estatica_mod(massas_kg, desl_m, erros_m, g=g,
+                                     l_aplicacao=l_aplicacao, L_lvdt=L_lvdt)
 
 
 def calcular_parametros_balanca(m1_kg, r1_m, m2_kg, r2_m, m_balanca=0.8, r_balanca=0.06, g=9.81):
@@ -196,6 +158,47 @@ def listar_portas():
 
 
 # ════════════════════════════════════════════════════════════════════════════
+# PERSISTÊNCIA DE CALIBRAÇÃO
+# ════════════════════════════════════════════════════════════════════════════
+
+import json
+
+_CALIB_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "calibration_state.json")
+
+_CALIB_KEYS = [
+    "calibrado", "k_torque", "l_lvdt", "l_thrust",
+    "fn_calculada", "S_calculada", "modo_teste",
+    "timestamp_calib", "massa_calib", "cg_calib",
+]
+
+
+def save_calibration():
+    data = {k: st.session_state[k] for k in _CALIB_KEYS}
+    with open(_CALIB_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+
+
+def load_calibration():
+    if not os.path.exists(_CALIB_FILE):
+        return
+    try:
+        with open(_CALIB_FILE, encoding="utf-8") as f:
+            data = json.load(f)
+        for k in _CALIB_KEYS:
+            if k in data:
+                st.session_state[k] = data[k]
+    except Exception:
+        pass
+
+
+def clear_calibration():
+    if os.path.exists(_CALIB_FILE):
+        os.remove(_CALIB_FILE)
+    for k in _CALIB_KEYS:
+        st.session_state.pop(k, None)
+
+
+# ════════════════════════════════════════════════════════════════════════════
 # ESTADO DA SESSÃO
 # ════════════════════════════════════════════════════════════════════════════
 
@@ -211,19 +214,24 @@ defaults = {
     "timestamp_calib": None,
     "massa_calib": 0.0,
     "cg_calib": 0.0,
+    "_calib_loaded": False,
 }
 for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
+
+if not st.session_state["_calib_loaded"]:
+    load_calibration()
+    st.session_state["_calib_loaded"] = True
 
 
 # ════════════════════════════════════════════════════════════════════════════
 # NAVEGAÇÃO
 # ════════════════════════════════════════════════════════════════════════════
 
-st.markdown("### 🛰️ LaSE — Balança de Microempuxo")
+st.markdown("### LaSE — Balança de Microempuxo")
 
-status_calib = "✅ Calibrada" if st.session_state.calibrado else "⚠️ Não calibrada"
+status_calib = "Calibrada" if st.session_state.calibrado else "Não calibrada"
 cor_status   = "green" if st.session_state.calibrado else "orange"
 st.markdown(
     f"<span style='font-size:12px;color:{cor_status};font-weight:600;'>{status_calib}</span> &nbsp;|&nbsp; "
@@ -232,9 +240,9 @@ st.markdown(
 )
 
 aba1, aba2, aba3 = st.tabs([
-    "⚙️  1 · Calibração",
-    "📡  2 · Aquisição de dados",
-    "📊  3 · Análise e exportação"
+    "1 · Calibração",
+    "2 · Aquisição de dados",
+    "3 · Análise e exportação"
 ])
 
 
@@ -274,8 +282,8 @@ with aba1:
         else:
             cg_valor = None
 
-        st.markdown("---")
-        st.markdown('<div class="section-title">Braços da balança</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title" style="margin-top:12px;">Braços da balança</div>',
+                    unsafe_allow_html=True)
         l_lvdt   = st.number_input("Braço LVDT — pivô ao sensor (m)",    value=0.300, step=0.001, format="%.3f")
         l_thrust = st.number_input("Braço motor — pivô ao propulsor (m)", value=0.250, step=0.001, format="%.3f")
 
@@ -291,18 +299,17 @@ with aba1:
         params = calcular_parametros_balanca(m1, r1, m2, r2)
         cg_final = cg_valor if cg_manual else params["cg"]
 
-        # Alerta de CG
         if cg_final > 0.001:
-            st.error("⚠️ **CG acima do pivô — balança instável!**  \n"
+            st.error("**CG acima do pivô — balança instável.**  \n"
                      "Reposicione os contrapesos para que o CG fique abaixo do ponto de pivô.")
         elif params["fn"] > 0 and params["fn"] < 0.5:
-            st.warning(f"⚠️ Frequência natural muito baixa ({params['fn']:.3f} Hz).  \n"
+            st.warning(f"Frequência natural muito baixa ({params['fn']:.3f} Hz).  \n"
                        "Aproxime os contrapesos do pivô ou reduza a massa para aumentar fnat.")
         elif params["fn"] > 5:
-            st.warning(f"⚠️ Frequência natural muito alta ({params['fn']:.3f} Hz).  \n"
+            st.warning(f"Frequência natural muito alta ({params['fn']:.3f} Hz).  \n"
                        "Afaste os contrapesos do pivô ou aumente a massa.")
         elif params["fn"] > 0:
-            st.success(f"✅ Parâmetros dentro do intervalo operacional.")
+            st.success("Parâmetros dentro do intervalo operacional.")
 
         mc1, mc2 = st.columns(2)
         mc1.metric("CG calculado",    f"{cg_final:.4f} m",      help="Negativo = CG abaixo do pivô (estável)")
@@ -311,8 +318,7 @@ with aba1:
         mc2.metric("Freq. natural fnat", f"{params['fn']:.3f} Hz",  help="Ideal: 0.5 – 5 Hz")
         mc1.metric("Sensibilidade S",  f"{params['S']:.2f} µm/N",  help="Quanto a balança se desloca por Newton")
 
-        st.markdown("---")
-        st.markdown('<div class="section-title">Constante k — calibração estática <span class="req-badge">RF15</span></div>',
+        st.markdown('<div class="section-title" style="margin-top:12px;">Constante k — calibração estática <span class="req-badge">RF15</span></div>',
                     unsafe_allow_html=True)
         st.caption("Carregue um CSV com colunas M (kg), d (m), e (m) para calcular k por regressão linear.")
 
@@ -329,9 +335,9 @@ with aba1:
                 cc2.metric("R²",          f"{r2:.4f}", delta="válido" if r2 >= 0.99 else "abaixo de 0.99")
 
                 if r2 >= 0.99:
-                    st.success("✅ Ajuste linear válido — R² ≥ 0.99.")
+                    st.success("Ajuste linear válido — R² ≥ 0.99.")
                 else:
-                    st.warning("⚠️ R² abaixo de 0.99. Revise os dados de calibração.")
+                    st.warning("R² abaixo de 0.99. Revise os dados de calibração.")
 
                 fig_k, ax_k = plt.subplots(figsize=(5, 3))
                 ax_k.errorbar(Theta, Mteq, xerr=err_theta, fmt="o", color="#2563eb", label="Dados", markersize=4)
@@ -365,7 +371,6 @@ with aba1:
             st.info("**Modo contínuo:** aguarda regime permanente (variação <0.1%) e mede a "
                     "deflexão estável (xss). Filtro Butterworth ativo.")
 
-        st.markdown("---")
         forca_uN = st.slider("Força desejada (µN)", min_value=10, max_value=1000,
                              value=100, step=1, key="forca_slider")
         forca_num = st.number_input("Ou digite a força (µN)", value=float(forca_uN),
@@ -380,42 +385,36 @@ with aba1:
 
         st.markdown("**Voltagem calculada para o DCE:**")
         if bloqueado:
-            st.error(f"## ⛔ {V_calc} V — BLOQUEADO")
-            st.error("**RF14 — Limite de segurança de 1.000 V atingido.**  \n"
-                     "A aplicação desta voltagem foi bloqueada automaticamente. "
+            st.error(f"**{V_calc} V — BLOQUEADO** — RF14: limite de 1.000 V atingido. "
                      "Reduza a força ou aumente DE.")
         elif V_calc > 800:
-            st.warning(f"## ⚠️ {V_calc} V")
-            st.warning("Voltagem acima de 80% do limite. Monitore com cuidado.")
+            st.warning(f"**{V_calc} V** — acima de 80% do limite. Monitore com cuidado.")
         else:
-            st.success(f"## ✅ {V_calc} V")
-            st.caption(f"Dentro do limite de segurança (≤ 1.000 V)  —  {V_calc/10:.1f}% do limite")
+            st.success(f"**{V_calc} V** — dentro do limite de segurança (≤ 1.000 V)  —  {V_calc/10:.1f}% do limite")
 
         pct_volt = min(V_calc / 1000 * 100, 100)
         st.progress(int(pct_volt))
         st.caption(f"0 V ────────── 500 V ────────── 1.000 V (limite)")
 
-        st.markdown("---")
-        st.markdown('<div class="section-title">Parâmetros de análise do regime</div>',
-                    unsafe_allow_html=True)
-        if "Pulsado" in modo_dce:
-            st.markdown("""
-            | Parâmetro | Valor |
-            |-----------|-------|
-            | Medida de interesse | xmax (1º pico) |
-            | Resolução | 0.01 µm |
-            | Repetições | N = 10 |
-            | Filtro | Butterworth 5ª ord. |
-            """)
-        else:
-            st.markdown("""
-            | Parâmetro | Valor |
-            |-----------|-------|
-            | Medida de interesse | x_ss (regime perm.) |
-            | Settling time | ~100 s (τ × 4) |
-            | Critério steady-state | variação < 0.1% |
-            | Filtro | Butterworth 5ª ord. |
-            """)
+        with st.expander("Parâmetros de análise do regime"):
+            if "Pulsado" in modo_dce:
+                st.markdown("""
+                | Parâmetro | Valor |
+                |-----------|-------|
+                | Medida de interesse | xmax (1º pico) |
+                | Resolução | 0.01 µm |
+                | Repetições | N = 10 |
+                | Filtro | Butterworth 5ª ord. |
+                """)
+            else:
+                st.markdown("""
+                | Parâmetro | Valor |
+                |-----------|-------|
+                | Medida de interesse | x_ss (regime perm.) |
+                | Settling time | ~100 s (τ × 4) |
+                | Critério steady-state | variação < 0.1% |
+                | Filtro | Butterworth 5ª ord. |
+                """)
 
     st.markdown("---")
 
@@ -433,7 +432,7 @@ with aba1:
         ])
     with seq_col2:
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("✅ Marcar etapa como concluída", use_container_width=True):
+        if st.button("Marcar etapa como concluída", use_container_width=True):
             if "4 ·" in etapa:
                 st.session_state.calibrado = True
                 st.session_state.k_torque = params["k"] if not arquivo_k else st.session_state.k_torque
@@ -445,15 +444,20 @@ with aba1:
                 st.session_state.massa_calib = params["m_tot"]
                 st.session_state.cg_calib    = cg_final
                 st.session_state.modo_teste  = "pulsado" if "Pulsado" in modo_dce else "continuo"
-                st.success("🎉 Calibração concluída! A balança está pronta para uso.")
+                save_calibration()
+                st.success("Calibração concluída. A balança está pronta para uso.")
                 st.balloons()
             else:
                 st.info(f"Etapa marcada: {etapa[:30]}…  \nProssiga para a próxima etapa.")
 
     if st.session_state.calibrado:
-        st.success(f"✅ Balança calibrada em {st.session_state.timestamp_calib}  —  "
-                   f"k = {st.session_state.k_torque:.5f} N·m/rad  |  "
-                   f"fnat = {st.session_state.fn_calculada:.3f} Hz")
+        cb1, cb2 = st.columns([5, 1])
+        cb1.success(f"Balança calibrada em {st.session_state.timestamp_calib}  —  "
+                    f"k = {st.session_state.k_torque:.5f} N·m/rad  |  "
+                    f"fnat = {st.session_state.fn_calculada:.3f} Hz")
+        if cb2.button("Limpar calibração", use_container_width=True):
+            clear_calibration()
+            st.rerun()
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -463,11 +467,11 @@ with aba1:
 with aba2:
 
     if not st.session_state.calibrado:
-        st.warning("⚠️ A balança ainda não foi calibrada. Vá para a aba **Calibração** antes de iniciar um teste.")
+        st.warning("A balança ainda não foi calibrada. Vá para a aba **Calibração** antes de iniciar um teste.")
 
     st.markdown("#### Fonte de dados")
-    fonte = st.radio("Como você quer fornecer os dados?",
-                     ["📁 Carregar arquivo (.txt)", "🧪 Usar simulação (sem hardware)"],
+    fonte = st.radio("Fonte de dados",
+                     ["Carregar arquivo (.txt)", "Simulação (sem hardware)"],
                      horizontal=True)
 
     df_aq = None
@@ -484,12 +488,11 @@ with aba2:
                                     decimal=",", engine="python")
                 df_aq["time"]     = df_aq["time"].astype(float)
                 df_aq["raw_disp"] = df_aq["raw_disp"].astype(float)
-                st.success(f"✅ {len(df_aq):,} amostras carregadas  —  "
+                st.success(f"{len(df_aq):,} amostras carregadas  —  "
                            f"duração: {df_aq['time'].iloc[-1]:.1f} s")
             except Exception as e:
                 st.error(f"Erro ao ler arquivo: {e}")
 
-        st.markdown("---")
         st.markdown("##### Conexão com hardware (LVDT serial)")
         st.caption("Se o condicionador do LVDT estiver conectado via USB, selecione a porta abaixo.")
 
@@ -502,17 +505,17 @@ with aba2:
     # ── Simulação ─────────────────────────────────────────────────────────────
     else:
         st.info("Modo simulação: gera sinal de pêndulo amortecido com ruído gaussiano. "
-                "Útil para testar o pipeline sem hardware.")
+                "Útil para validar o pipeline de processamento sem hardware conectado.")
 
         sc1, sc2, sc3 = st.columns(3)
         modo_sim = sc1.selectbox("Modo", ["pulsado", "continuo"])
         dur_sim  = sc2.slider("Duração (s)", 10, 120, 30)
         fs_sim   = sc3.selectbox("Taxa (Hz)", [50, 100], index=1)
 
-        if st.button("▶ Gerar simulação", type="primary"):
+        if st.button("Gerar simulação", type="primary"):
             df_aq = gerar_simulacao(modo=modo_sim, duracao=dur_sim, fs=fs_sim)
             st.session_state.df_dados = df_aq
-            st.success(f"✅ {len(df_aq):,} amostras simuladas geradas.")
+            st.success(f"{len(df_aq):,} amostras simuladas geradas.")
 
         if st.session_state.df_dados is not None and df_aq is None:
             df_aq = st.session_state.df_dados
@@ -526,57 +529,56 @@ with aba2:
         d_raw    = df_aq["raw_disp"].values.astype(float)
         fs_dados = calcular_fs(time_arr)
 
-        st.markdown("---")
-        st.markdown("#### Visualização — sinal bruto do LVDT")
+        with st.container():
+            st.markdown("#### Sinal bruto — LVDT")
 
-        fig_raw, ax_raw = plt.subplots(figsize=(10, 3))
-        ax_raw.plot(time_arr, d_raw, color="#94a3b8", linewidth=0.7, label="Sinal bruto (µm)")
-        ax_raw.set_xlabel("Tempo (s)"); ax_raw.set_ylabel("Deslocamento (µm)")
-        ax_raw.set_title(f"Sinal LVDT — {len(d_raw):,} amostras · fs = {fs_dados:.1f} Hz")
-        ax_raw.grid(alpha=0.3); ax_raw.legend()
-        plt.tight_layout()
-        st.pyplot(fig_raw)
+            fig_raw, ax_raw = plt.subplots(figsize=(10, 3))
+            ax_raw.plot(time_arr, d_raw, color="#94a3b8", linewidth=0.7, label="Sinal bruto (µm)")
+            ax_raw.set_xlabel("Tempo (s)"); ax_raw.set_ylabel("Deslocamento (µm)")
+            ax_raw.set_title(f"Sinal LVDT — {len(d_raw):,} amostras · fs = {fs_dados:.1f} Hz")
+            ax_raw.grid(alpha=0.3); ax_raw.legend()
+            plt.tight_layout()
+            st.pyplot(fig_raw)
 
-        st.markdown("---")
-        st.markdown("#### Análise de frequência natural (FFT)")
-        st.caption("A FFT mostra em quais frequências o pêndulo oscila. "
-                   "O pico principal é a frequência natural (fnat).")
+        with st.container():
+            st.markdown("#### Análise espectral — frequência natural (FFT)")
+            st.caption("O pico principal do espectro corresponde à frequência natural (fnat) do pêndulo.")
 
-        fnat, xf, yr, yf = calcular_fnat(d_raw, fs_dados)
+            fnat, xf, yr, yf = calcular_fnat(d_raw, fs_dados)
 
-        fc1, fc2, fc3 = st.columns(3)
-        fc1.metric("fnat detectada", f"{fnat:.4f} Hz",
-                   delta="✓ faixa ok" if 0.5 <= fnat <= 5 else "fora de 0.5–5 Hz")
-        fc2.metric("fs detectada", f"{fs_dados:.1f} Hz")
-        fc3.metric("N amostras", f"{len(d_raw):,}")
+            fc1, fc2, fc3 = st.columns(3)
+            fc1.metric("fnat detectada", f"{fnat:.4f} Hz",
+                       delta="faixa ok" if 0.5 <= fnat <= 5 else "fora de 0.5–5 Hz")
+            fc2.metric("fs detectada", f"{fs_dados:.1f} Hz")
+            fc3.metric("N amostras", f"{len(d_raw):,}")
 
-        if fnat < 0.5 or fnat > 5:
-            st.warning(f"fnat = {fnat:.4f} Hz está fora da faixa operacional (0.5–5 Hz). "
-                       "Verifique a configuração dos contrapesos.")
-        else:
-            st.success(f"✅ fnat = {fnat:.4f} Hz — dentro da faixa operacional.")
+            if fnat < 0.5 or fnat > 5:
+                st.warning(f"fnat = {fnat:.4f} Hz está fora da faixa operacional (0.5–5 Hz). "
+                           "Verifique a configuração dos contrapesos.")
+            else:
+                st.success(f"fnat = {fnat:.4f} Hz — dentro da faixa operacional.")
 
-        fig_fft, (ax_t, ax_f) = plt.subplots(2, 1, figsize=(10, 6))
+            fig_fft, (ax_t, ax_f) = plt.subplots(2, 1, figsize=(10, 6))
 
-        d_filt_fft = apply_lowpass_filter(d_raw - np.mean(d_raw), fs=fs_dados, cutoff_freq=0.5)
-        ax_t.plot(time_arr, d_raw - np.mean(d_raw), color="#cbd5e1", linewidth=0.6, label="Sinal bruto")
-        ax_t.plot(time_arr, d_filt_fft, color="#2563eb", linewidth=1.2, label="Filtrado (Butterworth)")
-        ax_t.set_ylabel("Deslocamento (µm)"); ax_t.set_title("Domínio do tempo")
-        ax_t.legend(fontsize=8); ax_t.grid(alpha=0.3)
+            d_filt_fft = apply_lowpass_filter(d_raw - np.mean(d_raw), fs=fs_dados, cutoff_freq=0.5)
+            ax_t.plot(time_arr, d_raw - np.mean(d_raw), color="#cbd5e1", linewidth=0.6, label="Sinal bruto")
+            ax_t.plot(time_arr, d_filt_fft, color="#2563eb", linewidth=1.2, label="Filtrado (Butterworth)")
+            ax_t.set_ylabel("Deslocamento (µm)"); ax_t.set_title("Domínio do tempo")
+            ax_t.legend(fontsize=8); ax_t.grid(alpha=0.3)
 
-        ax_f.plot(xf, yr, color="#cbd5e1", linewidth=0.8, label="Espectro bruto")
-        ax_f.plot(xf, yf, color="#dc2626", linewidth=1.5, label="Espectro filtrado")
-        peak_mask = np.argmax(yf)
-        ax_f.plot(xf[peak_mask], yf[peak_mask], "x", color="black", markersize=10,
-                  label=f"fnat = {fnat:.4f} Hz")
-        ax_f.set_xlabel("Frequência (Hz)"); ax_f.set_ylabel("Magnitude")
-        ax_f.set_title("FFT — Domínio da frequência (janela Hanning)")
-        ax_f.legend(fontsize=8); ax_f.grid(alpha=0.3)
+            ax_f.plot(xf, yr, color="#cbd5e1", linewidth=0.8, label="Espectro bruto")
+            ax_f.plot(xf, yf, color="#dc2626", linewidth=1.5, label="Espectro filtrado")
+            peak_mask = np.argmax(yf)
+            ax_f.plot(xf[peak_mask], yf[peak_mask], "x", color="black", markersize=10,
+                      label=f"fnat = {fnat:.4f} Hz")
+            ax_f.set_xlabel("Frequência (Hz)"); ax_f.set_ylabel("Magnitude")
+            ax_f.set_title("FFT — Domínio da frequência (janela Hanning)")
+            ax_f.legend(fontsize=8); ax_f.grid(alpha=0.3)
 
-        plt.tight_layout()
-        st.pyplot(fig_fft)
+            plt.tight_layout()
+            st.pyplot(fig_fft)
 
-        st.session_state.fn_calculada = fnat
+            st.session_state.fn_calculada = fnat
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -586,7 +588,7 @@ with aba2:
 with aba3:
 
     if st.session_state.df_dados is None:
-        st.warning("⚠️ Nenhum dado carregado ainda. Vá para a aba **Aquisição de dados** primeiro.")
+        st.warning("Nenhum dado carregado. Vá para a aba **Aquisição de dados** primeiro.")
         st.stop()
 
     df = st.session_state.df_dados
@@ -597,6 +599,12 @@ with aba3:
     k  = st.session_state.k_torque
     lL = st.session_state.l_lvdt
     lT = st.session_state.l_thrust
+
+    # Compute full-signal thrust once — shared by export bar and statistics
+    thrust_mn_full = convert_to_mn(
+        apply_lowpass_filter(d_raw, fs=fs_dados, cutoff_freq=0.3), k, lT, lL
+    )
+    metrics_full = calculate_metrics(time_arr, thrust_mn_full)
 
     st.markdown("#### Parâmetros de análise")
     pc1, pc2, pc3, pc4 = st.columns(4)
@@ -609,6 +617,85 @@ with aba3:
     modo_analise = st.radio("Modo de análise",
                             ["Pulsado — captura xmax", "Contínuo — regime permanente"],
                             horizontal=True)
+
+    # ── Export bar ───────────────────────────────────────────────────────────
+    with st.container():
+        ex_c1, ex_c2, ex_c3, ex_c4 = st.columns([3, 1, 1, 1])
+        nome_arquivo = ex_c1.text_input(
+            "Nome do arquivo",
+            value=f"lase_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        )
+
+        csv_bytes = gerar_csv(time_arr, thrust_mn_full)
+        ex_c2.download_button(
+            "Baixar CSV",
+            data=csv_bytes,
+            file_name=nome_arquivo + ".csv",
+            mime="text/csv",
+            use_container_width=True,
+            help="Abre no Excel. UTF-8 com BOM para compatibilidade."
+        )
+
+        fig_exp, ax_exp = plt.subplots(figsize=(10, 4))
+        ax_exp.plot(time_arr, thrust_mn_full, color="#16a34a", linewidth=1.2,
+                    label="Empuxo processado (mN)")
+        ax_exp.axhline(y=metrics_full["nominal_thrust"], color="#dc2626", linestyle="--",
+                       label=f"Empuxo nominal: {metrics_full['nominal_thrust']:.4f} mN")
+        ax_exp.set_xlabel("Tempo (s)"); ax_exp.set_ylabel("Empuxo (mN)")
+        ax_exp.set_title(f"Relatório — {nome_arquivo}")
+        ax_exp.grid(alpha=0.3); ax_exp.legend()
+        plt.tight_layout()
+        img_buf = io.BytesIO()
+        fig_exp.savefig(img_buf, format="png", dpi=300, bbox_inches="tight")
+        img_buf.seek(0)
+        plt.close(fig_exp)
+
+        ex_c3.download_button(
+            "Baixar PNG",
+            data=img_buf,
+            file_name=nome_arquivo + ".png",
+            mime="image/png",
+            use_container_width=True,
+            help="Adequado para publicação em artigo."
+        )
+        with ex_c4:
+            if st.button("Gerar PDF", use_container_width=True):
+                with st.spinner("Gerando relatório PDF..."):
+                    pdf_bytes = gerar_pdf(
+                        time_arr      = time_arr,
+                        thrust_mn     = thrust_mn_full,
+                        metrics       = metrics_full,
+                        params_calib  = {
+                            "k_torque": st.session_state.k_torque,
+                            "l_lvdt":   st.session_state.l_lvdt,
+                            "l_thrust": st.session_state.l_thrust,
+                            "fn":       st.session_state.fn_calculada,
+                            "S":        st.session_state.S_calculada,
+                        },
+                        modo_teste      = st.session_state.modo_teste,
+                        nome_sessao     = nome_arquivo,
+                        fnat            = st.session_state.fn_calculada,
+                        xf              = xf if 'xf' in dir() else None,
+                        yr              = yr if 'yr' in dir() else None,
+                        yf              = yf if 'yf' in dir() else None,
+                        theta_calib     = Theta if 'Theta' in dir() else None,
+                        mteq_calib      = Mteq if 'Mteq' in dir() else None,
+                        k_calib         = k_calc if 'k_calc' in dir() else None,
+                        a_off_calib     = a_off if 'a_off' in dir() else None,
+                        r2_calib        = r2 if 'r2' in dir() else None,
+                        err_theta_calib = err_theta if 'err_theta' in dir() else None,
+                    )
+                st.session_state["_pdf_bytes"] = pdf_bytes
+                st.session_state["_pdf_name"]  = nome_arquivo + ".pdf"
+
+            if st.session_state.get("_pdf_bytes"):
+                st.download_button(
+                    "Baixar PDF",
+                    data=st.session_state["_pdf_bytes"],
+                    file_name=st.session_state["_pdf_name"],
+                    mime="application/pdf",
+                    use_container_width=True,
+                )
 
     st.markdown("---")
 
@@ -691,11 +778,6 @@ with aba3:
     st.markdown("---")
     st.markdown("#### Estatísticas detalhadas")
 
-    thrust_mn_full = convert_to_mn(
-        apply_lowpass_filter(d_raw, fs=fs_dados, cutoff_freq=0.3), k, lT, lL
-    )
-    metrics_full = calculate_metrics(time_arr, thrust_mn_full)
-
     stats_data = {
         "Métrica": ["Empuxo nominal (Ft)", "Bias (offset)",
                     "Pico máximo", "Média", "Desvio padrão (σ)", "Ruído RMS"],
@@ -712,66 +794,15 @@ with aba3:
 
     err_rel = abs(np.std(thrust_mn_full) / np.mean(thrust_mn_full) * 100) if np.mean(thrust_mn_full) != 0 else 0
     if err_rel < 1.0:
-        st.success(f"✅ Erro relativo: {err_rel:.3f}% — dentro do critério de 1% (RNF03).")
+        st.success(f"Erro relativo: {err_rel:.3f}% — dentro do critério de 1% (RNF03).")
     else:
-        st.warning(f"⚠️ Erro relativo: {err_rel:.3f}% — acima de 1%. Considere recalibrar.")
-
-    # ── Exportação ────────────────────────────────────────────────────────────
-    st.markdown("---")
-    st.markdown("#### Exportação de dados")
-
-    nome_arquivo = st.text_input("Nome do arquivo",
-                                 value=f"lase_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
-
-    ec1, ec2, ec3 = st.columns(3)
-
-    # CSV
-    csv_bytes = gerar_csv(time_arr, thrust_mn_full)
-    ec1.download_button(
-        "⬇️ Baixar CSV",
-        data=csv_bytes,
-        file_name=nome_arquivo + ".csv",
-        mime="text/csv",
-        use_container_width=True,
-        help="Abre no Excel. UTF-8 com BOM para compatibilidade."
-    )
-
-    # PNG do gráfico
-    fig_exp, ax_exp = plt.subplots(figsize=(10, 4))
-    ax_exp.plot(time_arr, thrust_mn_full, color="#16a34a", linewidth=1.2, label="Empuxo processado (mN)")
-    ax_exp.axhline(y=metrics_full["nominal_thrust"], color="#dc2626", linestyle="--",
-                   label=f"Empuxo nominal: {metrics_full['nominal_thrust']:.4f} mN")
-    ax_exp.set_xlabel("Tempo (s)"); ax_exp.set_ylabel("Empuxo (mN)")
-    ax_exp.set_title(f"Relatório — {nome_arquivo}")
-    ax_exp.grid(alpha=0.3); ax_exp.legend()
-    plt.tight_layout()
-
-    img_buf = io.BytesIO()
-    fig_exp.savefig(img_buf, format="png", dpi=300, bbox_inches="tight")
-    img_buf.seek(0)
-
-    ec2.download_button(
-        "⬇️ Baixar gráfico (PNG 300 dpi)",
-        data=img_buf,
-        file_name=nome_arquivo + ".png",
-        mime="image/png",
-        use_container_width=True,
-        help="Adequado para publicação em artigo."
-    )
-
-    # PDF — instrução
-    with ec3:
-        st.button("⬇️ Gerar PDF", use_container_width=True, disabled=True,
-                  help="Conecte o backend FastAPI com ReportLab (RF16). Endpoint: POST /api/export/pdf")
-        st.caption("PDF: implemente `report_generator.py` como endpoint FastAPI + ReportLab.")
-
-    st.pyplot(fig_exp)
+        st.warning(f"Erro relativo: {err_rel:.3f}% — acima de 1%. Considere recalibrar.")
 
     # ── Alerta de recalibração ────────────────────────────────────────────────
     st.markdown("---")
     if st.session_state.calibrado:
-        st.success(f"✅ Calibração válida desde {st.session_state.timestamp_calib}. "
+        st.success(f"Calibração válida desde {st.session_state.timestamp_calib}. "
                    "Nenhuma mudança de configuração detectada nesta sessão.")
     else:
-        st.warning("⚠️ A balança não foi calibrada nesta sessão. "
+        st.warning("A balança não foi calibrada nesta sessão. "
                    "Os resultados podem estar incorretos. Acesse a aba **Calibração**.")
