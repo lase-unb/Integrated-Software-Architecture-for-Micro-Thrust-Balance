@@ -121,6 +121,40 @@ Os módulos das Camadas 1–3 (`fn_calculation.py`, `find_deflection.py`, `k_cal
 
 ---
 
+## Guia de Módulos
+
+Descrição do que cada arquivo da arquitetura faz e como ele se encaixa no pipeline. Não cobre `Análises/` (scripts históricos de experimentos anteriores do LaSE, fora da arquitetura de software mantida).
+
+### `calibration/`
+
+- **`find_deflection.py`** — calcula a deflexão (Δd) entre uma janela de baseline e uma janela de patamar, com incerteza combinada σ_c = √(σ₁²+σ₂²) (GUM). Expõe `calcular_deflexao()`, importada por `interface/main.py`; também roda sozinho (`python find_deflection.py arquivo.txt`) para análise offline com gráfico.
+- **`k_calculation.py`** — determina a rigidez torcional k por regressão linear T(θ)=k·θ+a (mínimos quadrados) a partir de um CSV de massas/deslocamento/erro, com R² para validar o ajuste. Expõe `calibracao_estatica()`, importada por `interface/main.py`.
+- **`pendulum-dynamic.py`** — só cabeçalho/comentários por enquanto; reservado para as equações diferenciais da dinâmica do pêndulo (simples e 2º modo de vibração). Ainda não implementado.
+- **`physics/`** — scripts MATLAB/Python de modelagem física (efeito Joule, força eletromagnética, geometria do núcleo etc.) usados nos estudos de dimensionamento da balança. Não são importados pelo app; ficam como referência de cálculo.
+
+### `signal_processing/`
+
+- **`processing.py`** — núcleo de DSP do projeto. `apply_kalman_filter()` implementa o Filtro de Kalman linear (2 estados: posição e velocidade) sintonizado pela frequência natural; `apply_lowpass_filter()` aplica Butterworth 5ª ordem fase-zero (`filtfilt`) seguido do Kalman; `convert_to_mn()` converte deslocamento (µm) em empuxo (mN); `calculate_metrics()` extrai bias, empuxo nominal e ruído RMS. É importado por praticamente todos os outros módulos (main.py, live_plot.py, fn_calculation.py, LVDT_Plot_V2.py).
+- **`fn_calculation.py`** — identifica a frequência natural (fnat) via FFT (rfft) do sinal filtrado, buscando o pico de maior magnitude. Expõe `calcular_fnat()`, importada por `interface/main.py`; também roda sozinho.
+- **`simulator.py`** — script standalone que gera dados sintéticos de pêndulo amortecido (ruído + oscilação + degrau de empuxo) e escreve continuamente em `data.txt`, respeitando o tempo real (`time.sleep`) — serve para testar `live_plot.py` sem hardware conectado. Não é importado por `main.py` (que tem seu próprio gerador de simulação embutido, em lote).
+
+### `interface/`
+
+- **`main.py`** — aplicação Streamlit, ponto de entrada (`streamlit run interface/main.py`). Três abas: Calibração (parâmetros físicos da balança, constante k, configuração do DCE), Aquisição de dados (upload de arquivo ou simulação), Análise e exportação (modo pulsado/contínuo, métricas, exportação CSV/PNG/PDF).
+- **`report_pdf.py`** — gera o relatório PDF institucional bilíngue PT/EN via ReportLab (metadados do ensaio, resultados, estatísticas e gráficos). Função principal `gerar_pdf()`, chamada pelo botão "Gerar PDF" da aba 3.
+- **`live_plot.py`** — visualizador de telemetria em tempo real standalone (desktop, matplotlib `FuncAnimation`, 50 ms), lê um arquivo de dados fixo via polling. É uma ferramenta separada do app Streamlit, não integrada ao `main.py`.
+- **`web/`** — protótipo estático de interface alternativa em HTML/CSS/Chart.js (`index.html`, `calibracao.html`, `analise.html`). Sem integração com nenhum backend — é um mockup visual, não uma interface funcional.
+
+### `hardware/`
+
+- **`data_acquisition.py`** — lê a porta serial USB do condicionador do LVDT (baud rate 9600) e grava as amostras em `data.txt`, no formato que os demais módulos esperam (tempo e deslocamento separados por TAB, decimal em vírgula).
+
+### `tools/`
+
+- **`LVDT_Plot_V2.py`** — identifica o xmax (maior deflexão absoluta) em um sinal já filtrado, usado na análise do regime pulsado. Expõe `detectar_xmax()`, importada por `interface/main.py`.
+
+---
+
 ## Publicação
 
 **Arquitetura de Software Integrada para Automação Metrológica e Tratamento de Ruídos em Bancadas de Microempuxo**
