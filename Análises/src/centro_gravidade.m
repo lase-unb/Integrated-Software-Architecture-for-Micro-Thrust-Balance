@@ -11,12 +11,12 @@ m_c = 1.434;   % [kg] (massa do contra-peso)
 
 % ---- Chamada das funções
 %cg_y = calcular_cg_1d(m_p, y_p, m_c, y_c, m_b);
-cg_y = -0.08859; % valor retirado do software SOLIDWORKS. Verficar o arquivo "0.Thrust_Balance_cg_y.x_t"
+cg_y = -0.04686; % valor retirado do software SOLIDWORKS. Verficar o arquivo "0.Thrust_Balance_cg_y.x_t"
 S = calcular_sensibilidade(y_p, m_p, m_c, g, cg_y);
 
 % ---- Exibição dos resultados
 % Definição do diretório e arquivo
-pasta_saida = 'C:\Users\thami\OneDrive - unb.br\FGA\Balança de Microempuxo - LaSE\Integrated-Software-Architecture-for-Micro-Thrust-Balance\Análises\resultados\carga_constante\27_maio\S-2';
+pasta_saida = 'C:\Users\thami\OneDrive - unb.br\FGA\Balança de Microempuxo - LaSE\Integrated-Software-Architecture-for-Micro-Thrust-Balance\Análises\resultados\carga_constante\1-junho';
 nome_arquivo = 'resultados_cg_sensibilidade.txt';
 caminho_completo = fullfile(pasta_saida, nome_arquivo);
 
