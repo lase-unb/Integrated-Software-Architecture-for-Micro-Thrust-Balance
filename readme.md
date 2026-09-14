@@ -4,7 +4,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.9+-blue)](https://python.org)
 [![Streamlit](https://img.shields.io/badge/Interface-Streamlit-red)](https://streamlit.io)
-[![License](https://img.shields.io/badge/License-TBD-gray)]()
+[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
 ---
 
@@ -177,4 +177,4 @@ Sessão 2 — Sustentabilidade, Educação, Ciência e Tecnologia | Formato: Pre
 
 ## Licença
 
-A definir.
+[MIT](LICENSE) — uso, cópia, modificação e redistribuição livres, inclusive comercial, desde que mantidos os créditos.
