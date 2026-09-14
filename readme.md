@@ -14,6 +14,8 @@ Este repositório contém a arquitetura de software desenvolvida no **Laboratór
 
 A arquitetura é estruturada em um **pipeline digital de quatro camadas** implementado em Python, integrando análise espectral (FFT), filtragem Butterworth de quinta ordem com fase zero, Filtro de Kalman sintonizado em Gêmeo Digital, gerenciamento metrológico de dados e interface Streamlit para telemetria e geração automatizada de relatórios PDF institucionais.
 
+![Aba de calibração da interface Streamlit](docs/img/interface_calibracao.png)
+
 ---
 
 ## Estrutura do Repositório
