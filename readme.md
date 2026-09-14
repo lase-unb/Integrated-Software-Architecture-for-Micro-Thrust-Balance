@@ -10,7 +10,7 @@
 
 ## Visão Geral
 
-Este repositório contém a arquitetura de software desenvolvida no **Laboratório de Sistemas Espaciais (LaSE)** da Universidade de Brasília (UnB), em parceria com a **Agência Espacial Brasileira (AEB)**, para caracterização precisa de sistemas de micropropulsão.
+Este repositório contém a arquitetura de software desenvolvida no **Laboratório de Sistemas Espaciais (LaSE)** da Universidade de Brasília (UnB) para caracterização precisa de sistemas de micropropulsão.
 
 A arquitetura é estruturada em um **pipeline digital de quatro camadas** implementado em Python, integrando análise espectral (FFT), filtragem Butterworth de quinta ordem com fase zero, Filtro de Kalman sintonizado em Gêmeo Digital, gerenciamento metrológico de dados e interface Streamlit para telemetria e geração automatizada de relatórios PDF institucionais.
 
@@ -169,7 +169,7 @@ Sessão 2 — Sustentabilidade, Educação, Ciência e Tecnologia | Formato: Pre
 - Luana Carvalho de Almeida — 242004840@aluno.unb.br (UnB)
 - Thamiris Thomazini Libard — 200043820@aluno.unb.br (UnB)
 - Lui Txai Calvoso Habl — lui.habl@unb.br (UnB)
-- Paolo Gessini — paolo.gessini@aeb.gov.br (AEB)
+- Paolo Gessini (UnB)
 
 **Palavras-chave:** micropropulsão · arquitetura de software modular · processamento digital de sinais · calibração eletrostática in situ · Gêmeo Digital
 
