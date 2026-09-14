@@ -46,7 +46,8 @@ Integrated-Software-Architecture-for-Micro-Thrust-Balance/
 │   │   ├── 2_modo_vibracao.py       # Análise de modos de vibração
 │   │   └── calibracao.py
 │   ├── find_deflection.py           # Análise de deflexão + incerteza GUM (importado por interface/main.py)
-│   ├── k_calculation.py             # Constante de rigidez torcional k (importado por interface/main.py)
+│   ├── k_calculation.py             # Constante de rigidez efetiva k (importado por interface/main.py)
+│   ├── dce_calibration.py           # Calibração in situ via DCE (simulada, sem hardware validado)
 │   └── pendulum-dynamic.py          # Modelo dinâmico do pêndulo
 │
 ├── signal_processing/               # Camadas 1 e 2 — FFT + DSP
@@ -65,7 +66,8 @@ Integrated-Software-Architecture-for-Micro-Thrust-Balance/
 │       └── style.css
 │
 ├── hardware/                        # Aquisição de dados
-│   └── data_acquisition.py          # Interface serial USB com LVDT
+│   ├── data_acquisition.py          # Interface serial USB com LVDT
+│   └── dce_power_supply.py          # Driver SCPI/USB da fonte do DCE (real + simulado)
 │
 ├── tools/                           # Scripts auxiliares
 │   └── LVDT_Plot_V2.py              # Identificação de deslocamento máximo (importado por interface/main.py)
@@ -128,7 +130,8 @@ Descrição do que cada arquivo da arquitetura faz e como ele se encaixa no pipe
 ### `calibration/`
 
 - **`find_deflection.py`** — calcula a deflexão (Δd) entre uma janela de baseline e uma janela de patamar, com incerteza combinada σ_c = √(σ₁²+σ₂²) (GUM). Expõe `calcular_deflexao()`, importada por `interface/main.py`; também roda sozinho (`python find_deflection.py arquivo.txt`) para análise offline com gráfico.
-- **`k_calculation.py`** — determina a rigidez torcional k por regressão linear T(θ)=k·θ+a (mínimos quadrados) a partir de um CSV de massas/deslocamento/erro, com R² para validar o ajuste. Expõe `calibracao_estatica()`, importada por `interface/main.py`.
+- **`k_calculation.py`** — determina a rigidez efetiva k por regressão linear T(θ)=k·θ+a (mínimos quadrados) a partir de um CSV de massas/deslocamento/erro, com R² para validar o ajuste. Expõe `calibracao_estatica()`, importada por `interface/main.py`.
+- **`dce_calibration.py`** — calibração in situ via DCE (Dispositivo de Calibração Eletrostática): varre voltagens conhecidas, lê a deflexão resultante (`calibrar_via_dce()`) e ajusta a rigidez efetiva por regressão, com a força convertida pela lei quadrática de placas paralelas (`forca_dce()`). Interlock de 1000V embutido. **Validado apenas em simulação** (`python dce_calibration.py`, usando `FontePowerSupplySimulada`) — ainda não testado com a fonte/DCE/LVDT reais nem conectado à interface Streamlit.
 - **`pendulum-dynamic.py`** — só cabeçalho/comentários por enquanto; reservado para as equações diferenciais da dinâmica do pêndulo (simples e 2º modo de vibração). Ainda não implementado.
 - **`physics/`** — scripts MATLAB/Python de modelagem física (efeito Joule, força eletromagnética, geometria do núcleo etc.) usados nos estudos de dimensionamento da balança. Não são importados pelo app; ficam como referência de cálculo.
 
@@ -148,6 +151,7 @@ Descrição do que cada arquivo da arquitetura faz e como ele se encaixa no pipe
 ### `hardware/`
 
 - **`data_acquisition.py`** — lê a porta serial USB do condicionador do LVDT (baud rate 9600) e grava as amostras em `data.txt`, no formato que os demais módulos esperam (tempo e deslocamento separados por TAB, decimal em vírgula).
+- **`dce_power_supply.py`** — driver SCPI/USB da fonte programável do DCE (`RigolDP932U`, via PyVISA — não testado com hardware real) e um substituto sem hardware com a mesma interface (`FontePowerSupplySimulada`), usado por `calibration/dce_calibration.py`.
 
 ### `tools/`
 

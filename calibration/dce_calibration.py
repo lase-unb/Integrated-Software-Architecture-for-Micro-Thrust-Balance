@@ -17,11 +17,13 @@ from dce_power_supply import VOLT_MAX
 
 def forca_dce(voltagem_V, k_ecd, de_mm):
     """
-    Força eletrostática de placas paralelas: F(V) = k_ecd * (V/de)^2.
-    voltagem_V em volts, de_mm em milímetros, k_ecd na unidade que casa com
-    a força desejada (N) -- calibrado empiricamente (ver Seção 5.2 do artigo).
+    Força eletrostática de placas paralelas: F(V) = k_ecd * (V/de)^2, em N.
+    voltagem_V em volts, de_mm em milímetros. k_ecd é o mesmo parâmetro usado
+    em interface/main.py (calcular_voltagem_dce), calibrado para retornar a
+    força em µN -- por isso o resultado é convertido para N (fator 1e-6).
     """
-    return k_ecd * (np.asarray(voltagem_V, dtype=float) / de_mm) ** 2
+    forca_uN = k_ecd * (np.asarray(voltagem_V, dtype=float) / de_mm) ** 2
+    return forca_uN * 1e-6
 
 
 def calibrar_via_dce(fonte, ler_deflexao_fn, voltagens_V, k_ecd, de_mm,
