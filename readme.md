@@ -4,7 +4,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.9+-blue)](https://python.org)
 [![Streamlit](https://img.shields.io/badge/Interface-Streamlit-red)](https://streamlit.io)
-[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![License](https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.0.0-orange)](LICENSE)
 
 ---
 
@@ -177,4 +177,4 @@ Sessão 2 — Sustentabilidade, Educação, Ciência e Tecnologia | Formato: Pre
 
 ## Licença
 
-[MIT](LICENSE) — uso, cópia, modificação e redistribuição livres, inclusive comercial, desde que mantidos os créditos.
+[PolyForm Noncommercial 1.0.0](LICENSE) — uso, cópia, modificação e redistribuição livres para fins não comerciais (pesquisa, ensino, uso pessoal, organizações sem fins lucrativos). Uso comercial requer licenciamento separado com o LaSE.
