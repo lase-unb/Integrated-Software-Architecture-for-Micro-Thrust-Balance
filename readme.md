@@ -129,33 +129,31 @@ Descrição do que cada arquivo da arquitetura faz e como ele se encaixa no pipe
 
 ### `calibration/`
 
-- **`find_deflection.py`** — calcula a deflexão (Δd) entre uma janela de baseline e uma janela de patamar, com incerteza combinada σ_c = √(σ₁²+σ₂²) (GUM). Expõe `calcular_deflexao()`, importada por `interface/main.py`; também roda sozinho (`python find_deflection.py arquivo.txt`) para análise offline com gráfico.
-- **`k_calculation.py`** — determina a rigidez efetiva k por regressão linear T(θ)=k·θ+a (mínimos quadrados) a partir de um CSV de massas/deslocamento/erro, com R² para validar o ajuste. Expõe `calibracao_estatica()`, importada por `interface/main.py`.
-- **`dce_calibration.py`** — calibração in situ via DCE (Dispositivo de Calibração Eletrostática): varre voltagens conhecidas, lê a deflexão resultante (`calibrar_via_dce()`) e ajusta a rigidez efetiva por regressão, com a força convertida pela lei quadrática de placas paralelas (`forca_dce()`). Interlock de 1000V embutido. **Validado apenas em simulação** (`python dce_calibration.py`, usando `FontePowerSupplySimulada`) — ainda não testado com a fonte/DCE/LVDT reais nem conectado à interface Streamlit.
-- **`pendulum-dynamic.py`** — só cabeçalho/comentários por enquanto; reservado para as equações diferenciais da dinâmica do pêndulo (simples e 2º modo de vibração). Ainda não implementado.
-- **`physics/`** — scripts MATLAB/Python de modelagem física (efeito Joule, força eletromagnética, geometria do núcleo etc.) usados nos estudos de dimensionamento da balança. Não são importados pelo app; ficam como referência de cálculo.
+`find_deflection.py` calcula a deflexão (Δd) entre uma janela de baseline e uma janela de patamar, com incerteza combinada σ_c = √(σ₁²+σ₂²) (GUM). A função `calcular_deflexao()` é importada por `interface/main.py`, mas o script também roda sozinho (`python find_deflection.py arquivo.txt`) para uma análise offline com gráfico.
+
+Rigidez efetiva k é assunto de dois módulos, dependendo da fonte de força usada na calibração. `k_calculation.py` faz isso a partir de massas conhecidas — regressão linear T(θ)=k·θ+a por mínimos quadrados, com R² pra validar o ajuste (`calibracao_estatica()`). `dce_calibration.py` faz o mesmo ajuste, mas trocando a massa pela força eletrostática do DCE (lei quadrática de placas paralelas, `forca_dce()`), varrendo voltagens e lendo a deflexão resultante em `calibrar_via_dce()`. Tem interlock de 1000V embutido, mas **só foi validado em simulação** até agora (`python dce_calibration.py`, com `FontePowerSupplySimulada`) — falta testar com a fonte/DCE/LVDT reais e ligar isso na interface Streamlit.
+
+`pendulum-dynamic.py` ainda não tem implementação — só cabeçalho, reservado pras equações diferenciais da dinâmica do pêndulo (simples e 2º modo de vibração). E `physics/` guarda os scripts MATLAB/Python de modelagem física usados no dimensionamento da balança (efeito Joule, força eletromagnética, geometria do núcleo); não são importados pelo app, ficam como referência de cálculo.
 
 ### `signal_processing/`
 
-- **`processing.py`** — núcleo de DSP do projeto. `apply_kalman_filter()` implementa o Filtro de Kalman linear (2 estados: posição e velocidade) sintonizado pela frequência natural; `apply_lowpass_filter()` aplica Butterworth 5ª ordem fase-zero (`filtfilt`) seguido do Kalman; `convert_to_mn()` converte deslocamento (µm) em empuxo (mN); `calculate_metrics()` extrai bias, empuxo nominal e ruído RMS. É importado por praticamente todos os outros módulos (main.py, live_plot.py, fn_calculation.py, LVDT_Plot_V2.py).
-- **`fn_calculation.py`** — identifica a frequência natural (fnat) via FFT (rfft) do sinal filtrado, buscando o pico de maior magnitude. Expõe `calcular_fnat()`, importada por `interface/main.py`; também roda sozinho.
-- **`simulator.py`** — script standalone que gera dados sintéticos de pêndulo amortecido (ruído + oscilação + degrau de empuxo) e escreve continuamente em `data.txt`, respeitando o tempo real (`time.sleep`) — serve para testar `live_plot.py` sem hardware conectado. Não é importado por `main.py` (que tem seu próprio gerador de simulação embutido, em lote).
+`processing.py` é o núcleo de DSP do projeto e é importado por praticamente todo o resto (main.py, live_plot.py, fn_calculation.py, LVDT_Plot_V2.py). `apply_kalman_filter()` implementa o Filtro de Kalman linear de 2 estados (posição e velocidade) sintonizado pela frequência natural; `apply_lowpass_filter()` roda o Butterworth 5ª ordem fase-zero (`filtfilt`) seguido do Kalman; `convert_to_mn()` converte µm em mN; `calculate_metrics()` extrai bias, empuxo nominal e ruído RMS.
+
+A frequência natural (fnat) sai de `fn_calculation.py`, via FFT (rfft) do sinal filtrado buscando o pico de maior magnitude — `calcular_fnat()`, importada por `interface/main.py` e também executável sozinha.
+
+`simulator.py` é diferente dos outros: gera dados sintéticos de pêndulo amortecido (ruído + oscilação + degrau de empuxo) e escreve continuamente em `data.txt` respeitando o tempo real (`time.sleep`), pra testar `live_plot.py` sem hardware. Ninguém importa esse arquivo — `main.py` tem seu próprio gerador de simulação, em lote.
 
 ### `interface/`
 
-- **`main.py`** — aplicação Streamlit, ponto de entrada (`streamlit run interface/main.py`). Três abas: Calibração (parâmetros físicos da balança, constante k, configuração do DCE), Aquisição de dados (upload de arquivo ou simulação), Análise e exportação (modo pulsado/contínuo, métricas, exportação CSV/PNG/PDF).
-- **`report_pdf.py`** — gera o relatório PDF institucional bilíngue PT/EN via ReportLab (metadados do ensaio, resultados, estatísticas e gráficos). Função principal `gerar_pdf()`, chamada pelo botão "Gerar PDF" da aba 3.
-- **`live_plot.py`** — visualizador de telemetria em tempo real standalone (desktop, matplotlib `FuncAnimation`, 50 ms), lê um arquivo de dados fixo via polling. É uma ferramenta separada do app Streamlit, não integrada ao `main.py`.
-- **`web/`** — protótipo estático de interface alternativa em HTML/CSS/Chart.js (`index.html`, `calibracao.html`, `analise.html`). Sem integração com nenhum backend — é um mockup visual, não uma interface funcional.
+`main.py` é o ponto de entrada da aplicação (`streamlit run interface/main.py`), com três abas: Calibração, Aquisição de dados e Análise/exportação. `report_pdf.py` gera o relatório PDF bilíngue PT/EN via ReportLab quando o botão "Gerar PDF" da aba 3 é clicado (`gerar_pdf()`). `live_plot.py` é uma ferramenta à parte — visualizador desktop standalone (matplotlib `FuncAnimation`, 50 ms) que lê um arquivo fixo via polling, não integrado ao app Streamlit. E `web/` é só um mockup estático em HTML/CSS/Chart.js, sem backend nenhum por trás.
 
 ### `hardware/`
 
-- **`data_acquisition.py`** — lê a porta serial USB do condicionador do LVDT (baud rate 9600) e grava as amostras em `data.txt`, no formato que os demais módulos esperam (tempo e deslocamento separados por TAB, decimal em vírgula).
-- **`dce_power_supply.py`** — driver SCPI/USB da fonte programável do DCE (`RigolDP932U`, via PyVISA — não testado com hardware real) e um substituto sem hardware com a mesma interface (`FontePowerSupplySimulada`), usado por `calibration/dce_calibration.py`.
+`data_acquisition.py` lê a porta serial USB do condicionador do LVDT (baud rate 9600) e grava em `data.txt` no formato esperado pelos outros módulos. `dce_power_supply.py` é o par de classes usadas pela calibração via DCE: `RigolDP932U` fala SCPI de verdade com a fonte via PyVISA (não testada com hardware ainda), e `FontePowerSupplySimulada` imita a mesma interface sem precisar do equipamento.
 
 ### `tools/`
 
-- **`LVDT_Plot_V2.py`** — identifica o xmax (maior deflexão absoluta) em um sinal já filtrado, usado na análise do regime pulsado. Expõe `detectar_xmax()`, importada por `interface/main.py`.
+`LVDT_Plot_V2.py` identifica o xmax (maior deflexão absoluta) num sinal já filtrado — usado na análise do regime pulsado, exposto como `detectar_xmax()` e importado por `interface/main.py`.
 
 ---
 
